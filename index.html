@@ -3181,13 +3181,87 @@
   }
 
   ENV.garden = { sky: springTex, fog: 0xEAF2E6, near: 45, far: 160, sun: 0xFFF6E4, sunI: 1.05, hemi: 0.8, hemiSky: 0xF2FAF0, hemiGround: 0x8A9A6A };
+  // ---------- homecoming (回家): the first island again, at night — lighthouse beam, stars, blue tears on the shore ----------
+  const nightIslandG = new THREE.Group(); nightIslandG.visible = false; scene.add(nightIslandG);
+  const hc = {};
+  LAZY.push(['homecoming', function () {
+    // stars and a moon, with a silver path on the sea
+    const n = 900, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1; const a = (u - Math.floor(u)) * Math.PI * 2, e = 0.05 + Math.pow(v - Math.floor(v), 0.8) * 1.4; pos.set([Math.cos(a) * Math.cos(e) * 330, Math.sin(e) * 330, Math.sin(a) * Math.cos(e) * 330], i * 3); }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    nightIslandG.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xFFF6E8, size: 1.8, sizeAttenuation: false, fog: false })));
+    const MOON = V(0.55, 0.22, -0.8).normalize();
+    const moon = new THREE.Mesh(new THREE.CircleGeometry(11, 40), new THREE.MeshBasicMaterial({ color: 0xF4EDD8, fog: false })); moon.position.copy(MOON).multiplyScalar(330); moon.lookAt(0, 0, 0); nightIslandG.add(moon);
+    const mh = new THREE.Mesh(new THREE.PlaneGeometry(110, 110), new THREE.MeshBasicMaterial({ map: radialTex([[0, 'rgba(240,232,210,0.5)'], [0.3, 'rgba(200,210,240,0.12)'], [1, 'rgba(180,190,230,0)']]), transparent: true, depthWrite: false, fog: false })); mh.position.copy(MOON).multiplyScalar(338); mh.lookAt(0, 0, 0); nightIslandG.add(mh);
+    const pc = document.createElement('canvas'); pc.width = 64; pc.height = 256; const pg = pc.getContext('2d');
+    const gx = pg.createLinearGradient(0, 0, 64, 0); gx.addColorStop(0, 'rgba(200,210,240,0)'); gx.addColorStop(0.5, 'rgba(220,228,250,0.8)'); gx.addColorStop(1, 'rgba(200,210,240,0)'); pg.fillStyle = gx; pg.fillRect(0, 0, 64, 256);
+    pg.globalCompositeOperation = 'destination-in'; const gy = pg.createLinearGradient(0, 0, 0, 256); gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(0.2, 'rgba(0,0,0,1)'); gy.addColorStop(1, 'rgba(0,0,0,0.9)'); pg.fillStyle = gy; pg.fillRect(0, 0, 64, 256);
+    const path = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(pc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    path.rotation.order = 'YXZ'; path.rotation.x = -Math.PI / 2; path.rotation.y = Math.atan2(-MOON.x, -MOON.z); path.scale.set(7, 220, 1);
+    path.position.copy(V(MOON.x, 0, MOON.z).normalize().multiplyScalar(120)); path.position.y = -0.12; nightIslandG.add(path); hc.path = path;
+    // the lighthouse lamp, now lit: a rotating pair of beams and a warm glow
+    const beamM = new THREE.MeshBasicMaterial({ map: (function () { const c = document.createElement('canvas'); c.width = 4; c.height = 128; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,240,190,0.38)'); gr.addColorStop(0.6, 'rgba(255,240,190,0.12)'); gr.addColorStop(1, 'rgba(255,240,190,0)'); g.fillStyle = gr; g.fillRect(0, 0, 4, 128); return new THREE.CanvasTexture(c); })(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+    const beams = new THREE.Group(); beams.position.y = 5.5; nightIslandG.add(beams); hc.beams = beams;
+    [0, Math.PI].forEach(r => { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 3.0, 46, 16, 1, true), beamM); b.rotation.z = Math.PI / 2; b.position.x = 23; const arm = new THREE.Group(); arm.rotation.y = r; arm.add(b); beams.add(arm); });
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTex([[0, 'rgba(255,240,200,1)'], [0.3, 'rgba(255,220,150,0.45)'], [1, 'rgba(255,210,140,0)']]), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); glow.position.y = 5.5; glow.scale.setScalar(4.5); nightIslandG.add(glow);
+    const lampL = new THREE.PointLight(0xFFE0A0, 1.4, 22, 2); lampL.position.y = 5.5; nightIslandG.add(lampL);
+    // a warm doorway at the foot of the lighthouse, and two friends waiting
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.2), new THREE.MeshBasicMaterial({ color: 0xFFC878 })); door.position.set(0, 0.72, 1.0); door.rotation.x = -0.12; nightIslandG.add(door);
+    const doorL = new THREE.PointLight(0xFFC070, 1.0, 7, 2); doorL.position.set(0, 1.0, 2.2); nightIslandG.add(doorL);
+    const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), new THREE.MeshBasicMaterial({ color: 0xFFE0A0 })); lantern.position.set(0.55, 1.5, 1.05); nightIslandG.add(lantern);
+    hc.friends = [];
+    [[-0.9, 2.2, 0.3], [0.9, 2.3, -0.35]].forEach(([x, z, yaw], k) => {
+      const g = new THREE.Group(); g.position.set(x, 0.12, z); g.rotation.y = yaw; nightIslandG.add(g);
+      facet(g, M(0xEFEBE2), V(0, 0.95, 0), [0.4, 0.3, 0.26], [0, 0, 0.35], 1);
+      [-1, 1].forEach(sd => rod(g, V(0, 0.65, sd * 0.1), V(0.05, 0, sd * 0.12), 0.03, mat.leg));
+      const neck = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(0.25, 1.15), V(0.32, 1.4), V(0.25, 1.62), V(0.33, 1.78)]), 10, 0.055, 6), M(0xEFEBE2)); g.add(neck);
+      facet(g, M(0xEFEBE2), V(0.37, 1.82, 0), [0.12, 0.09, 0.09], null, 1);
+      const bk = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.62, 4), mat.beak); bk.rotation.z = -Math.PI / 2 - 0.5; bk.position.set(0.62, 1.66, 0); g.add(bk);
+      facet(g, mat.pouch, V(0.58, 1.6, 0), [0.24, 0.06, 0.05], [0, 0, -0.5], 1);
+      const wing = new THREE.Group(); wing.position.set(0.05, 1.05, 0.25); g.add(wing); feather(wing, M(0xD9D4C8), V(0, 0, 0), V(-0.5, -0.2, 0.3), V(0, 0, 1), 0.6, 0.25); feather(wing, M(0x2E3338), V(-0.4, -0.15, 0.2), V(-0.8, -0.1, 0.3), V(0, 0, 1), 0.35, 0.12);
+      g.scale.setScalar(1.15); hc.friends.push({ g, wing, k });
+    });
+    // blue tears: bioluminescent plankton that light up where the waves come in
+    const N = 2600, bp = new Float32Array(N * 3), bc = new Float32Array(N * 3), seeds = new Float32Array(N * 2);
+    for (let i = 0; i < N; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1; const a = (u - Math.floor(u)) * Math.PI * 2, r = 9.3 + Math.pow(v - Math.floor(v), 1.6) * 7; seeds.set([a, r], i * 2); bp.set([Math.cos(a) * r, -0.3, Math.sin(a) * r], i * 3); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(bp, 3)); bg.setAttribute('color', new THREE.BufferAttribute(bc, 3));
+    const tears = new THREE.Points(bg, new THREE.PointsMaterial({ map: radialTex([[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,0.5)'], [1, 'rgba(255,255,255,0)']]), size: 0.32, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    tears.frustumCulled = false; nightIslandG.add(tears); hc.tears = tears; hc.seeds = seeds;
+    const surf = new THREE.Mesh(new THREE.RingGeometry(9.3, 10.3, 96, 1), new THREE.MeshBasicMaterial({ color: 0x3AC8FF, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false })); surf.rotation.x = -Math.PI / 2; surf.position.y = -0.25; nightIslandG.add(surf); hc.surf = surf;
+    // an occasional shooting star
+    const ss = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.35, 14, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    nightIslandG.add(ss); hc.ss = ss;
+  }]);
+  const _blue = new THREE.Color(0x3AC8FF), _deep = new THREE.Color(0x0A2A40);
+  function updateHomecoming(t) {
+    updateSea(t);
+    hc.beams.rotation.y = t * 0.55;
+    const { tears, seeds } = hc, col = tears.geometry.attributes.color, p = tears.geometry.attributes.position;
+    for (let i = 0; i < seeds.length / 2; i++) {
+      const a = seeds[i * 2], r = seeds[i * 2 + 1];
+      // wave fronts roll in toward the shore; the plankton flash as a front passes, brightest near the sand
+      const wave = Math.pow(Math.max(0, Math.sin(r * 1.1 + t * 1.6 + Math.sin(a * 3) * 0.8)), 10);
+      const shore = Math.max(0, 1 - (r - 9.3) / 7), k = wave * (0.35 + 0.65 * shore) + 0.04 * Math.sin(t * 3 + i);
+      col.setXYZ(i, _deep.r + (_blue.r - _deep.r) * k, _deep.g + (_blue.g - _deep.g) * k, _deep.b + (_blue.b - _deep.b) * k);
+      p.setY(i, -0.32 + Math.sin(a * 5 + t * 1.1) * 0.08 + Math.cos(r * 0.3 - t * 0.9) * 0.1);
+    }
+    col.needsUpdate = true; p.needsUpdate = true;
+    hc.surf.material.opacity = 0.12 + Math.pow(Math.max(0, Math.sin(9.8 * 1.1 + t * 1.6)), 6) * 0.35;
+    hc.path.material.opacity = 0.6 + Math.sin(t * 1.7) * 0.1;
+    hc.friends.forEach(f => { f.wing.rotation.x = f.k === 0 ? Math.max(0, Math.sin(t * 1.1)) * 1.2 : 0; f.g.rotation.z = Math.sin(t * 0.8 + f.k) * 0.02; });
+    const SS = 13, u = (t % SS) / SS;
+    if (u < 0.08) { const q = u / 0.08; hc.ss.material.opacity = Math.sin(q * Math.PI) * 0.8; hc.ss.position.set(-60 + q * 70, 70 - q * 25, -120 + Math.floor(t / SS) % 3 * 40); hc.ss.rotation.set(0, 0, 1.1); } else hc.ss.material.opacity = 0;
+  }
+
+  ENV.homecoming = { sky: nightTex, fog: 0x0E1628, near: 45, far: 170, sun: 0x9DB2FF, sunI: 0.38, hemi: 0.4, hemiSky: 0x6A78B0, hemiGround: 0x1A2230 };
   ENV.wet = { sky: morningTex, fog: 0xDCE6EC, near: 30, far: 120, sun: 0xFFF0D8, sunI: 1.0, hemi: 0.8, hemiSky: 0xE6F0FA, hemiGround: 0x9A9080 };
   let sceneName = 'island';
   const islandOnly = [island, sea, glint];
   function setScene(name) {
     buildScene(name);
     sceneName = name;
-    islandOnly.forEach(o => { o.visible = name === 'island'; });
+    islandOnly.forEach(o => { o.visible = name === 'island' || (name === 'homecoming' && o !== glint); });
+    nightIslandG.visible = name === 'homecoming';
     school.visible = name === 'school';
     market.visible = night.visible = basket.visible = name === 'market';
     circleG.visible = name === 'circle';
@@ -3208,11 +3282,11 @@
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden';
-    setEnv(isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming';
+    setEnv(isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -3250,7 +3324,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -3317,15 +3391,15 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'homecoming'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming'].includes(location.hash)) applyScene(location.hash.slice(1));
   // editing the #hash by hand now switches scenes too (bug spotted by Kimi)
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SCENE_LABEL[h] && h !== sceneName) applyScene(h); });
   const btnMusic = document.getElementById('music');
