@@ -2801,6 +2801,136 @@
   }
 
   ENV.rain = { sky: rainTex, fog: 0x1A222C, near: 9, far: 55, sun: 0x8FA0C0, sunI: 0.3, hemi: 0.5, hemiSky: 0x7A8AA0, hemiGround: 0x2A3038 };
+  // ---------- the vinyl record (黑膠): riding the grooves of a giant spinning record ----------
+  const vinylG = new THREE.Group(); vinylG.visible = false; scene.add(vinylG);
+  const vState = { notes: [], bars: [], sleeves: [], cones: [] };
+  const audioLink = { analyser: null, data: null };   // filled in when the viewer presses play
+  const dreamTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#1A1038'); gr.addColorStop(0.3, '#4A2A6E'); gr.addColorStop(0.45, '#C0588A'); gr.addColorStop(0.5, '#F2A36A'); gr.addColorStop(1, '#2A1830');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  LAZY.push(['vinyl', function () {
+    // plinth and platter
+    const walnut = M(0x6E4A30, { roughness: 0.5 });
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(26, 1.4, 22), walnut); plinth.position.set(1.5, -1.1, -1); plinth.receiveShadow = true; vinylG.add(plinth);
+    const platter = new THREE.Mesh(new THREE.CylinderGeometry(9.1, 9.1, 0.3, 64), M(0xB8BEC4, { metalness: 0.7, roughness: 0.3 })); platter.position.y = -0.28; vinylG.add(platter);
+    for (let k = 0; k < 90; k++) { const a = k / 90 * Math.PI * 2, d = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.05), M(0x2B2D33)); d.position.set(Math.cos(a) * 9.12, -0.28, Math.sin(a) * 9.12); d.rotation.y = -a; vinylG.add(d); }
+    // the record: fine concentric grooves, a golden pelican label; it spins against the pelican
+    const rec = new THREE.Group(); vinylG.add(rec); vState.rec = rec;
+    const gc = document.createElement('canvas'); gc.width = gc.height = 1024; const g = gc.getContext('2d');
+    g.fillStyle = '#121214'; g.fillRect(0, 0, 1024, 1024);
+    for (let r = 300; r < 505; r += 2.4) { g.strokeStyle = `rgba(255,255,255,${0.035 + ((r * 7) % 5) * 0.006})`; g.lineWidth = 1; g.beginPath(); g.arc(512, 512, r, 0, 7); g.stroke(); }
+    [360, 430].forEach(r => { g.strokeStyle = 'rgba(0,0,0,0.9)'; g.lineWidth = 6; g.beginPath(); g.arc(512, 512, r, 0, 7); g.stroke(); });   // gaps between tracks
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(8.7, 96), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(gc), roughness: 0.42, metalness: 0.2 }));
+    disc.rotation.x = -Math.PI / 2; disc.receiveShadow = true; rec.add(disc);
+    const edge = new THREE.Mesh(new THREE.CylinderGeometry(8.7, 8.7, 0.12, 96, 1, true), M(0x121214)); edge.position.y = -0.06; rec.add(edge);
+    const lc = document.createElement('canvas'); lc.width = lc.height = 512; const lg = lc.getContext('2d');
+    lg.fillStyle = '#B8322A'; lg.beginPath(); lg.arc(256, 256, 256, 0, 7); lg.fill();
+    lg.fillStyle = '#F2C14E'; lg.beginPath(); lg.arc(256, 256, 180, 0, 7); lg.fill();
+    lg.fillStyle = '#B8322A'; lg.beginPath(); lg.arc(256, 256, 150, 0, 7); lg.fill();
+    lg.fillStyle = '#F4F1EA'; lg.beginPath(); lg.ellipse(236, 250, 46, 30, -0.2, 0, 7); lg.fill(); lg.beginPath(); lg.arc(270, 206, 18, 0, 7); lg.fill();
+    lg.fillStyle = '#F0B24A'; lg.beginPath(); lg.moveTo(284, 204); lg.lineTo(360, 232); lg.lineTo(284, 216); lg.closePath(); lg.fill();
+    lg.fillStyle = '#F2C14E'; lg.textAlign = 'center'; lg.font = '700 30px Georgia, serif';
+    const word = 'GOLDEN PELICAN RECORDS  ·  SIDE A  ·  33⅓  ·  ';
+    for (let i = 0; i < word.length; i++) { const a = -Math.PI / 2 + i / word.length * Math.PI * 2; lg.save(); lg.translate(256 + Math.cos(a) * 214, 256 + Math.sin(a) * 214); lg.rotate(a + Math.PI / 2); lg.fillText(word[i], 0, 10); lg.restore(); }
+    lg.fillStyle = '#F4F1EA'; lg.font = '700 26px Georgia, serif'; lg.fillText('黃金鵜鶘', 256, 330);
+    const label = new THREE.Mesh(new THREE.CircleGeometry(2.7, 64), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(lc), roughness: 0.7 })); label.rotation.x = -Math.PI / 2; label.position.y = 0.01; rec.add(label);
+    const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.9, 12), M(0xDDE2E6, { metalness: 0.8, roughness: 0.2 })); spindle.position.y = 0.45; vinylG.add(spindle);
+    // rainbow sheen that stays put while the record turns underneath it
+    const sc = document.createElement('canvas'); sc.width = sc.height = 512; const sg = sc.getContext('2d');
+    if (sg.createConicGradient) { const cg = sg.createConicGradient(0.6, 256, 256); [[0, 'rgba(255,255,255,0)'], [0.06, 'rgba(160,200,255,0.16)'], [0.1, 'rgba(255,190,230,0.12)'], [0.16, 'rgba(255,255,255,0)'], [0.5, 'rgba(255,255,255,0)'], [0.56, 'rgba(200,255,220,0.12)'], [0.62, 'rgba(255,255,255,0)'], [1, 'rgba(255,255,255,0)']].forEach(([o, c]) => cg.addColorStop(o, c)); sg.fillStyle = cg; sg.fillRect(0, 0, 512, 512); }
+    sg.globalCompositeOperation = 'destination-out'; sg.beginPath(); sg.arc(256, 256, 160, 0, 7); sg.fill();
+    const sheen = new THREE.Mesh(new THREE.CircleGeometry(8.7, 64), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); sheen.rotation.x = -Math.PI / 2; sheen.position.y = 0.02; vinylG.add(sheen);
+    // tonearm: pivot, long S-free straight arm, headshell and needle resting in the outer groove
+    const chrome = M(0xDDE2E6, { metalness: 0.8, roughness: 0.2 }), black = M(0x1C1D20);
+    const NA = -0.62, needle = V(Math.cos(NA) * 7.7, 0.02, Math.sin(NA) * 7.7), pivot = V(12.2, 1.1, -6.5);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.0, 0.5, 20), black); base.position.set(pivot.x, -0.2, pivot.z); vinylG.add(base);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.2, 12), chrome); post.position.set(pivot.x, 0.5, pivot.z); vinylG.add(post);
+    const headTop = needle.clone().add(V(0, 0.55, 0)), dir = new THREE.Vector3().subVectors(pivot, headTop).normalize();
+    rod(vinylG, pivot, headTop, 0.09, chrome);
+    rod(vinylG, pivot, pivot.clone().addScaledVector(dir, 1.6), 0.05, chrome);
+    const cw = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.7, 16), black); cw.position.copy(pivot).addScaledVector(dir, 1.6); cw.quaternion.setFromUnitVectors(UP, dir); vinylG.add(cw);
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.2, 0.45), black); shell.position.copy(headTop).add(V(0, -0.1, 0)); shell.rotation.y = Math.atan2(-dir.z, dir.x); vinylG.add(shell);
+    rod(vinylG, headTop.clone().add(V(0, -0.2, 0)), needle.clone().add(V(0, 0.03, 0)), 0.02, M(0xC9A04A, { metalness: 0.6 }));
+    const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTex([[0, 'rgba(255,240,200,1)'], [1, 'rgba(255,200,150,0)']]), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); spark.position.copy(needle).add(V(0, 0.05, 0)); spark.scale.setScalar(0.6); vinylG.add(spark); vState.spark = spark;
+    vState.needle = needle;
+    // music notes rising from the needle
+    const noteCols = [0xF2C14E, 0xFF9EDB, 0x9FE3FF, 0xC9A8FF];
+    for (let k = 0; k < 14; k++) {
+      const n = new THREE.Group(); const m = new THREE.MeshStandardMaterial({ color: noteCols[k % 4], emissive: noteCols[k % 4], emissiveIntensity: 0.6, flatShading: true });
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), m); head.scale.set(1.3, 0.9, 0.5); head.rotation.z = 0.4; n.add(head);
+      const stem = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.6, 0.04), m); stem.position.set(0.17, 0.3, 0); n.add(stem);
+      if (k % 2) { const beam = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.04), m); beam.position.set(0.42, 0.58, 0); beam.rotation.z = -0.15; n.add(beam); const h2 = head.clone(); h2.position.set(0.5, 0.0, 0); n.add(h2); const s2 = stem.clone(); s2.position.set(0.67, 0.28, 0); n.add(s2); }
+      else { feather(n, m, V(0.18, 0.58, 0), V(0.6, -1, 0), V(0, 0, 1), 0.3, 0.14); }
+      vinylG.add(n); vState.notes.push({ n, ph: k / 14 });
+    }
+    // two speakers with woofers that thump to the beat
+    [[-15, -8], [17, 4]].forEach(([x, z]) => {
+      const sp = new THREE.Group(); sp.position.set(x, 0, z); sp.rotation.y = Math.atan2(-x, -z); vinylG.add(sp);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(4, 9, 3), M(0x2A1E18, { roughness: 0.6 })); cab.position.y = 4.5; cab.castShadow = true; sp.add(cab);
+      [[2.6, 1.3], [6.3, 0.7], [8.0, 0.35]].forEach(([y, r]) => {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.1, 8, 24), chrome); ring.position.set(0, y, 1.52); sp.add(ring);
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(r * 0.95, r * 0.5, 24, 1, true), M(0x1C1D20, { side: THREE.DoubleSide })); cone.rotation.x = -Math.PI / 2; cone.position.set(0, y, 1.35); sp.add(cone);
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(r * 0.25, 12, 8), M(0x3A3C42)); cap.position.set(0, y, 1.45); sp.add(cap);
+        vState.cones.push({ cone, cap, r });
+      });
+    });
+    // a ring of equalizer bars round the horizon
+    for (let i = 0; i < 64; i++) {
+      const a = i / 64 * Math.PI * 2, col = new THREE.Color().setHSL(0.78 - (i % 16) / 16 * 0.5, 0.8, 0.6);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1, 0.6), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.8 }));
+      b.position.set(Math.cos(a) * 30, 0, Math.sin(a) * 30); b.rotation.y = -a; vinylG.add(b); vState.bars.push({ b, i });
+    }
+    // record sleeves drifting in the air
+    for (let k = 0; k < 10; k++) {
+      const c = document.createElement('canvas'); c.width = c.height = 128; const cg = c.getContext('2d');
+      const hues = [[200, 40], [330, 20], [40, 200], [280, 160], [160, 20]][k % 5];
+      cg.fillStyle = `hsl(${hues[0]},55%,45%)`; cg.fillRect(0, 0, 128, 128);
+      cg.fillStyle = `hsl(${hues[1]},70%,62%)`; if (k % 3 === 0) { cg.beginPath(); cg.arc(64, 64, 40, 0, 7); cg.fill(); } else if (k % 3 === 1) { for (let y = 0; y < 128; y += 22) cg.fillRect(0, y, 128, 10); } else { cg.beginPath(); cg.moveTo(20, 108); cg.lineTo(64, 20); cg.lineTo(108, 108); cg.fill(); }
+      const sl = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c), side: THREE.DoubleSide, roughness: 0.8 }));
+      vinylG.add(sl); vState.sleeves.push({ sl, a: k * 0.63, r: 19 + (k % 3) * 4, y: 6 + (k % 4) * 2.2, ph: k });
+    }
+    // stars
+    const n = 400, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1; const a = (u - Math.floor(u)) * Math.PI * 2, e = 0.3 + (v - Math.floor(v)) * 1.2; pos.set([Math.cos(a) * Math.cos(e) * 300, Math.sin(e) * 300, Math.sin(a) * Math.cos(e) * 300], i * 3); }
+    const sgeo = new THREE.BufferGeometry(); sgeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    vinylG.add(new THREE.Points(sgeo, new THREE.PointsMaterial({ color: 0xFFF0F6, size: 1.6, sizeAttenuation: false, fog: false })));
+    const rimL = new THREE.PointLight(0xFF9EDB, 0.8, 30, 2); rimL.position.set(-8, 6, 8); vinylG.add(rimL);
+  }]);
+  // big headphones for the pelican (vinyl only)
+  const vinylGear = [];
+  (function () {
+    const g = new THREE.Group(); g.position.set(0.14, 2.38, 0); headGrp.add(g); vinylGear.push(g);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 6, 20, Math.PI), M(0x2B2D33)); band.rotation.y = Math.PI / 2; band.position.y = 0.02; g.add(band);
+    [-1, 1].forEach(sd => { const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 16), M(0xC8453A, { roughness: 0.4 })); cup.rotation.x = Math.PI / 2; cup.position.set(0, 0, sd * 0.2); g.add(cup); const pad = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.025, 6, 14), M(0x1C1D20)); pad.position.set(0, 0, sd * 0.155); g.add(pad); });
+    g.visible = false;
+  })();
+  function beatLevel(t) {
+    if (audioLink.analyser) { audioLink.analyser.getByteFrequencyData(audioLink.data); let s = 0; for (let i = 1; i < 8; i++) s += audioLink.data[i]; return Math.min(1, s / (7 * 255) * 1.25); }
+    return Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 * 1.6)), 6);
+  }
+  function bandLevel(t, i, beat) {
+    if (audioLink.analyser) { const d = audioLink.data, k = Math.min(d.length - 1, Math.floor(Math.pow(i / 64, 1.6) * d.length * 0.7)); return d[k] / 255; }
+    return Math.max(0.08, 0.35 + 0.3 * Math.sin(t * 3 + i * 0.7) * Math.sin(t * 1.3 + i * 0.23) + (i % 32 < 10 ? beat * 0.45 : 0));
+  }
+  function updateVinyl(t) {
+    vState.rec.rotation.y = -t * 0.35;   // spinning against the pelican, like a treadmill
+    const beat = beatLevel(t);
+    vState.spark.scale.setScalar(0.5 + beat * 0.5);
+    vState.notes.forEach(o => {
+      const u = (t * 0.12 + o.ph) % 1, a = Math.atan2(vState.needle.z, vState.needle.x) + Math.sin(u * 5 + o.ph * 9) * 0.25;
+      const r = 7.7 + u * 3 * Math.sin(o.ph * 20);
+      o.n.position.set(Math.cos(a) * r, 0.4 + u * 9, Math.sin(a) * r);
+      o.n.rotation.set(0, t * 0.6 + o.ph * 6, Math.sin(t * 2 + o.ph * 7) * 0.3);
+      o.n.scale.setScalar(Math.min(1, u * 6) * (1 - Math.max(0, (u - 0.8) / 0.2)) * (1 + beat * 0.25));
+    });
+    vState.cones.forEach(c => { const pump = 1 + beat * 0.35; c.cone.scale.set(1, pump, 1); c.cap.position.z = 1.45 + beat * c.r * 0.15; });
+    vState.bars.forEach(o => { const h = 0.6 + bandLevel(t, o.i, beat) * 9; o.b.scale.y = h; o.b.position.y = h / 2; });
+    vState.sleeves.forEach(o => { const a = o.a + t * 0.03; o.sl.position.set(Math.cos(a) * o.r, o.y + Math.sin(t * 0.5 + o.ph) * 0.6, Math.sin(a) * o.r); o.sl.rotation.set(Math.sin(t * 0.3 + o.ph) * 0.4, t * 0.2 + o.ph, Math.cos(t * 0.25 + o.ph) * 0.3); });
+  }
+
+  ENV.vinyl = { sky: dreamTex, fog: 0x3A2448, near: 35, far: 140, sun: 0xFFE0F0, sunI: 0.95, hemi: 0.6, hemiSky: 0xC9A8FF, hemiGround: 0x4A2A3A };
   ENV.wet = { sky: morningTex, fog: 0xDCE6EC, near: 30, far: 120, sun: 0xFFF0D8, sunI: 1.0, hemi: 0.8, hemiSky: 0xE6F0FA, hemiGround: 0x9A9080 };
   let sceneName = 'island';
   const islandOnly = [island, sea, glint];
@@ -2820,16 +2950,17 @@
     moonG.visible = name === 'moon'; spaceGear.forEach(o => { o.visible = name === 'moon' || name === 'space'; });
     spaceG.visible = name === 'space';
     homeG.visible = name === 'home';
+    vinylG.visible = name === 'vinyl'; vinylGear.forEach(o => { o.visible = name === 'vinyl'; });
     rainG.visible = name === 'rain'; rainGear.forEach(o => { o.visible = name === 'rain'; });
     libG.visible = name === 'library'; libGear.forEach(o => { o.visible = name === 'library'; });
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain';
-    setEnv(isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl';
+    setEnv(isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl; });
+    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl; });
+    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -2867,7 +2998,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -2934,21 +3065,29 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl'].includes(location.hash)) applyScene(location.hash.slice(1));
   // editing the #hash by hand now switches scenes too (bug spotted by Kimi)
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SCENE_LABEL[h] && h !== sceneName) applyScene(h); });
   const btnMusic = document.getElementById('music');
   let audio = null;
   btnMusic.onclick = () => {
-    if (!audio) { audio = new Audio('score.mp3'); audio.loop = true; audio.volume = 0.8; }
+    if (!audio) {
+      audio = new Audio('score.mp3'); audio.loop = true; audio.volume = 0.8;
+      try {   // let the vinyl scene's speakers and equalizer dance to the real track
+        const AC = window.AudioContext || window.webkitAudioContext, ac = new AC(), src = ac.createMediaElementSource(audio), an = ac.createAnalyser();
+        an.fftSize = 256; src.connect(an); an.connect(ac.destination);
+        audioLink.analyser = an; audioLink.data = new Uint8Array(an.frequencyBinCount); audioLink.ctx = ac;
+      } catch (e) { audioLink.analyser = null; }
+    }
+    if (audioLink.ctx && audioLink.ctx.state === 'suspended') audioLink.ctx.resume();
     if (audio.paused) {
       audio.play().then(() => { btnMusic.textContent = '♪ 停止音樂'; btnMusic.setAttribute('aria-pressed', 'true'); })
         .catch(() => { btnMusic.textContent = '♪ 音樂無法播放'; });

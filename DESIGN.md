@@ -15,9 +15,9 @@
 index.html
 ├─ 共用工具：facet / feather / rod / placeBetween / radialTex
 ├─ 主角：rider（位置、轉向）→ lean（轉彎傾斜）→ 單車＋bird（鵜鶘）
-├─ 16 個場景，每個場景是一個 THREE.Group：
+├─ 17 個場景，每個場景是一個 THREE.Group：
 │    island / school / market / circle / kyoto / moon / polar /
-│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain
+│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl
 ├─ ENV：每個場景一組環境設定（天空、霧、太陽光、環境光）
 ├─ setScene(name)：切換哪些 Group 看得到、套用 ENV、換上對應的裝備
 └─ pose(t)：給一個時間 t，算出整個畫面這一瞬間的樣子
@@ -76,6 +76,7 @@ index.html
 | 菜市場 | 斗笠＋塞滿高麗菜和蔥的車籃＋紅白袋 |
 | 書海 | 墨綠色圍巾 |
 | 雨天 | 夾在把手上的透明便利商店傘（傘緣會滴水）＋單車前燈 |
+| 黑膠 | 紅色大耳機 |
 
 ---
 
@@ -126,8 +127,9 @@ index.html
 | 家 | 黃金獵犬用相同的路徑公式跟在單車後方 2.7 單位；小嬰兒的頭用 `atan2` 一直轉向鵜鶘 |
 | 菜市場 | muse 點的菜。價錢紙板用程式寫上手寫風格的字；機車逆向穿過走道；老公寓的鐵窗、冷氣機、曬衣都畫在同一張立面貼圖上 |
 | 書海 | Kimi（Moonshot AI）寫的場景簡報。約七千本書用一個 `InstancedMesh` 畫完；發光句子是先把文字畫在 canvas 上，再逐點取樣變成 `Points`，往上飄、最後散開；每騎完一圈點亮一盞燈，燈數＝`floor(圈數) % 13`；地上翻開的書會依鵜鶘的角度距離掀起書頁；還藏了一個 M◯◯N 的月球彩蛋。Kimi 也抓到一個 bug：手動改網址的 `#` 不會切換場景，已經加上 `hashchange` 監聽修好 |
-
 | 雨天 | 這一站最早出現在第三站之後的那份下一站清單上，一直沒被點到，直到 Kimi 問起。三千兩百條雨絲用 `InstancedMesh`，每格重新計算每一條雨絲的位置和顏色：落進單車前燈 `SpotLight` 的光錐裡會變亮白，落在路燈底下會染成暖黃，其他地方是暗藍灰。另外還有六盞路燈的光錐、地上一圈圈擴散的雨滴漣漪、圖書館門口透出來的暖光，還有一隻躲在長椅下的橘貓 |
+| 黑膠 | 鵜鶘騎在一張會轉的巨型唱片上，唱片反方向轉，像跑步機。溝槽和標籤都用 canvas 畫；彩虹光澤是一張不跟著轉的 `createConicGradient` 疊層，所以唱片轉動時光澤留在原地，像真的反光。**按下播放音樂時**，會用 Web Audio 的 `AnalyserNode` 分析配樂：低頻推動喇叭振膜，64 根等化器光柱照頻譜跳動；沒有播音樂時，改用一個每分鐘 96 拍的合成節拍，錄影時也能維持固定的畫面 |
+
 ---
 
 ## 六、鏡頭
