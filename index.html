@@ -156,6 +156,10 @@
     s.castShadow = true; parent.add(s); return s;
   }
 
+  // scenes are built the first time they are visited (keeps phones light)
+  const LAZY = [];
+  function buildScene(name) { for (let i = LAZY.length - 1; i >= 0; i--) if (LAZY[i][0] === name) { const f = LAZY[i][1]; LAZY.splice(i, 1); f(); } }
+
   // ---------- island ----------
   const island = new THREE.Group(); scene.add(island);
   const R_PATH = 6;
@@ -517,7 +521,7 @@
 
   // ---------- school playground scene ----------
   const school = new THREE.Group(); school.visible = false; scene.add(school);
-  (function () {
+  LAZY.push(['school', function () {
     const flatDisc = (r0, r1, color, y) => {
       const m = new THREE.Mesh(r0 ? new THREE.RingGeometry(r0, r1, 96, 1) : new THREE.CircleGeometry(r1, 96), M(color));
       m.rotation.x = -Math.PI / 2; m.position.y = y; m.receiveShadow = true; school.add(m); return m;
@@ -604,7 +608,7 @@
     const hp = cyl(0.08, M(0x2F5F8A), 8); hp.scale.y = 3.2; hp.position.set(12.4, 1.6, 5.5); school.add(hp);
     const board = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 1.4), mat.white); board.position.set(12.2, 3.2, 5.5); board.castShadow = true; school.add(board);
     const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.025, 6, 16), M(0xE0592A)); hoop.rotation.x = Math.PI / 2; hoop.position.set(11.9, 2.95, 5.5); school.add(hoop);
-  })();
+  }]);
   function updateSchool(t) {
     const fl = school.userData.flag, p = fl.geo.attributes.position.array;
     for (let i = 0; i < p.length; i += 3) {
@@ -624,7 +628,7 @@
   })();
   const dayTex = scene.userData.sky.material.map;
   const night = new THREE.Group(); night.visible = false; scene.add(night);
-  (function () {
+  LAZY.push(['market', function () {
     // stars + moon
     const n = 500, pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
@@ -640,9 +644,9 @@
     mh.position.copy(MOON).multiplyScalar(338); mh.lookAt(0, 0, 0); night.add(mh);
     const moon = new THREE.Mesh(new THREE.CircleGeometry(9, 40), new THREE.MeshBasicMaterial({ color: 0xF4EBD2, fog: false }));
     moon.position.copy(MOON).multiplyScalar(330); moon.lookAt(0, 0, 0); night.add(moon);
-  })();
+  }]);
 
-  (function () {
+  LAZY.push(['market', function () {
     const ground = new THREE.Mesh(new THREE.CircleGeometry(260, 64), M(0x2A2C33)); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.01; ground.receiveShadow = true; market.add(ground);
     const lane = new THREE.Mesh(new THREE.RingGeometry(4.9, 7.1, 96, 1), M(0x3A3C44)); lane.rotation.x = -Math.PI / 2; lane.position.y = 0.01; lane.receiveShadow = true; market.add(lane);
     // warm pools of light
@@ -806,11 +810,11 @@
     }
     bulbs.count = bi; bulbs.instanceMatrix.needsUpdate = true; if (bulbs.instanceColor) bulbs.instanceColor.needsUpdate = true;
     market.add(bulbs);
-  })();
+  }]);
 
   // a boba tea in the bike basket, only at the night market
   const basket = new THREE.Group(); basket.visible = false; lean.add(basket);
-  (function () {
+  LAZY.push(['market', function () {
     const wick = M(0xB07A43);
     const bx = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.34), wick); bx.position.set(0.8, 1.14, 0); bx.castShadow = true; basket.add(bx);
     rod(basket, V(0.66, 1.2, 0), V(0.62, 1.2, 0), 0.02, mat.metal);
@@ -819,7 +823,7 @@
     const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.012, 10), M(0xF4F1EA)); lid.position.set(0.8, 1.485, 0.06); basket.add(lid);
     rod(basket, V(0.8, 1.48, 0.06), V(0.83, 1.64, 0.05), 0.013, M(0xE0592A));
     const lampB = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshBasicMaterial({ color: 0xFFF1C8 })); lampB.position.set(0.97, 1.12, 0); basket.add(lampB);
-  })();
+  }]);
   function updateMarket(t) {
     steamPuffs.forEach((sp, i) => sp.m.forEach((m, k) => {
       const u = (t * 0.45 + k / sp.m.length + i * 0.13) % 1;
@@ -845,7 +849,7 @@
     const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#000000'); gr.addColorStop(0.5, '#04050A'); gr.addColorStop(1, '#000000');
     g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
   })();
-  (function () {
+  LAZY.push(['moon', function () {
     // regolith terrain: flat ride ring on the crater rim, bowl inside, craters and far ridges outside
     const craters = [[18, -10, 3.2], [-15, 14, 4], [25, 20, 5], [-30, -20, 6.5], [8, 22, 2.4], [-22, -4, 2.8], [34, -26, 7]];
     function h(x, z) {
@@ -934,7 +938,7 @@
     }
     const dustM = new THREE.MeshStandardMaterial({ color: 0xB9B6AE, transparent: true, opacity: 0.55, flatShading: true, depthWrite: false });
     for (let k = 0; k < 14; k++) { const d = new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 0), dustM); moonG.add(d); dust.push(d); }
-  })();
+  }]);
   // space helmet + air tank for the pelican (moon only)
   const spaceGear = [];
   (function () {
@@ -967,7 +971,7 @@
     gr.addColorStop(0, '#0C1C38'); gr.addColorStop(0.28, '#1F3F6A'); gr.addColorStop(0.44, '#7FA3C2'); gr.addColorStop(0.5, '#E7C3BC'); gr.addColorStop(1, '#E7C3BC');
     g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
   })();
-  (function () {
+  LAZY.push(['polar', function () {
     // snowfield with a packed-snow ride ring; coastline dropping into dark sea
     function h(x, z) {
       const r = Math.hypot(x, z), a = Math.atan2(z, x);
@@ -1102,7 +1106,7 @@
       sgm.rotation.order = 'YXZ'; sgm.rotation.y = Math.PI / 2 - a; sgm.rotation.x = -Math.PI / 2;
       sgm.position.set(Math.cos(a) * R_PATH, 0.02, Math.sin(a) * R_PATH); sgm.visible = false; polarG.add(sgm); polarTracks.push(sgm);
     }
-  })();
+  }]);
   // winter gear for the pelican: knit hat + red scarf
   const winterGear = [], scarfTails = [];
   (function () {
@@ -1186,7 +1190,7 @@
     const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#DDEFCF'); gr.addColorStop(0.45, '#B4CCA2'); gr.addColorStop(1, '#8FA67E');
     g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
   })();
-  (function () {
+  LAZY.push(['jungle', function () {
     const greens = [M(0x2F5A2A), M(0x3C6B30), M(0x4E7F37), M(0x2A4A26), M(0x5E8F3C)];
     const floor = new THREE.Mesh(new THREE.CircleGeometry(200, 48), M(0x4A5A2E)); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.01; floor.receiveShadow = true; jungleG.add(floor);
     const trail = new THREE.Mesh(new THREE.RingGeometry(5.1, 6.9, 96, 1), M(0x7A5A3A)); trail.rotation.x = -Math.PI / 2; trail.position.y = 0.01; trail.receiveShadow = true; jungleG.add(trail);
@@ -1323,7 +1327,7 @@
       facet(g, M(0x2A211A), V(0, 0, 0), [0.07, 0.015, 0.015], null, 0);
       jungleG.add(g); morphos.push({ g, wings, ph: i * 1.37, cx: Math.cos(i * 0.785) * (3.5 + (i % 3) * 3), cz: Math.sin(i * 0.785) * (3.5 + (i % 3) * 3) });
     }
-  })();
+  }]);
   // explorer's pith helmet for the pelican (rainforest only)
   const jungleGear = [];
   (function () {
@@ -1372,7 +1376,7 @@
     g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
   })();
   const PAD = V(70, 3, -130);
-  (function () {
+  LAZY.push(['sky', function () {
     const cloudM = new THREE.MeshStandardMaterial({ color: 0xF0EAE4, roughness: 1, flatShading: true });
     // the sea of clouds
     const geo = new THREE.PlaneGeometry(420, 420, 110, 110); geo.rotateX(-Math.PI / 2);
@@ -1443,7 +1447,7 @@
       g.scale.setScalar(1.1); skyG.add(g);
       flock.push({ g, wings, i, row: Math.ceil(i / 2), side: i === 0 ? 0 : (i % 2 ? 1 : -1) });
     }
-  })();
+  }]);
   // aviator goggles for the pelican (sky only)
   const skyGear = [];
   (function () {
@@ -1507,7 +1511,7 @@
     const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#6CC3E2'); gr.addColorStop(0.3, '#2479A3'); gr.addColorStop(0.5, '#0F4C70'); gr.addColorStop(1, '#082A45');
     g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
   })();
-  (function () {
+  LAZY.push(['ocean', function () {
     // sandy floor with ripples, a paler ride ring
     const geo = new THREE.PlaneGeometry(160, 160, 140, 140); geo.rotateX(-Math.PI / 2);
     const p = geo.attributes.position;
@@ -1609,7 +1613,7 @@
     facet(turtle, M(0x8A9460), V(0.72, 0.05, 0), [0.18, 0.13, 0.14], null, 1);
     turtle.userData.flips = [[0.35, 1], [0.35, -1], [-0.4, 1], [-0.4, -1]].map(([x, sd], i) => { const pv = new THREE.Group(); pv.position.set(x, 0, sd * 0.4); turtle.add(pv); feather(pv, M(0x8A9460), V(0, 0, 0), V(i < 2 ? -0.3 : -0.8, 0, sd), V(0, 1, 0), i < 2 ? 0.7 : 0.35, i < 2 ? 0.28 : 0.2); pv.userData.s = sd; pv.userData.front = i < 2; return pv; });
     turtle.scale.setScalar(1.3);
-  })();
+  }]);
   // diving mask + snorkel for the pelican (sea only)
   const oceanGear = []; let snorkelTip = null;
   (function () {
@@ -1688,7 +1692,7 @@
     for (let i = 0; i < 2600; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, w = Math.sin(i * 3.7) * 999; const x = (u - Math.floor(u)) * 2048, y = (v - Math.floor(v)) * 1024, b = w - Math.floor(w); g.fillStyle = `rgba(255,${230 + Math.round(b * 25)},${210 + Math.round(b * 45)},${0.35 + b * 0.65})`; g.fillRect(x, y, b > 0.93 ? 2.5 : 1.2, b > 0.93 ? 2.5 : 1.2); }
     return new THREE.CanvasTexture(c);
   })();
-  (function () {
+  LAZY.push(['space', function () {
     // banded gas giant
     const bc = document.createElement('canvas'); bc.width = 64; bc.height = 256; const bg = bc.getContext('2d');
     const bands = ['#E8D2A6', '#D9B07A', '#F0E0BE', '#C98E5A', '#E6C890', '#B87A4E', '#EAD6AE', '#D4A36C', '#F2E4C6', '#C8905E'];
@@ -1747,7 +1751,7 @@
     ufo.userData.lights = [];
     for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2, l = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), new THREE.MeshBasicMaterial({ color: 0xFFE14A })); l.position.set(Math.cos(a) * 1.2, -0.03, Math.sin(a) * 1.2); ufo.add(l); ufo.userData.lights.push(l); }
     beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 1.4, 5, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x9FFFD0, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })); beam.position.y = -2.6; ufo.add(beam);
-  })();
+  }]);
   function updateSpace(t) {
     giant.rotation.y = t * 0.05;
     ringDust.rotation.y = -t * 0.02;
@@ -1767,7 +1771,7 @@
   // ---------- home (家): a sunny living room with a dog, three cats and a baby ----------
   const homeG = new THREE.Group(); homeG.visible = false; scene.add(homeG);
   let dog = null, baby = null, clockHands = null, catTail = null, yarnCat = null, yarn = null, winCat = null;
-  (function () {
+  LAZY.push(['home', function () {
     const RM = 11, WH = 7;
     // wooden floor
     const fc = document.createElement('canvas'); fc.width = 256; fc.height = 256; const fg = fc.getContext('2d');
@@ -1881,7 +1885,7 @@
     const tl = new THREE.Group(); tl.position.set(-0.6, 0.88, 0); dog.add(tl); dog.userData.tail = tl;
     feather(tl, gold2, V(0, 0, 0), V(-0.8, 0.8, 0), V(0, 0, 1), 0.6, 0.18);
     dog.scale.setScalar(1.35);
-  })();
+  }]);
   function updateHome(t) {
     // the dog runs just behind the pelican, a little further out
     const th = t * SPEED / R_PATH, ph = -th + 2.7 / R_PATH, r = R_PATH + 0.6;
@@ -1930,7 +1934,7 @@
   const ROADS = [0, Math.PI / 2, Math.PI, Math.PI * 1.5], ROAD_L = 150, TRIP_L = 85;
   const vehicles = [], jets = [];
   let statue = null, water = null;
-  (function () {
+  LAZY.push(['circle', function () {
     const flat = (geo, color, y, rotY) => {
       const m = new THREE.Mesh(geo, M(color)); m.rotation.x = -Math.PI / 2; if (rotY) m.rotation.z = rotY;
       m.position.y = y; m.receiveShadow = true; circleG.add(m); return m;
@@ -2010,7 +2014,7 @@
       b.position.set(x + (rr - 0.5) * 2, h / 2, z + (0.5 - rr) * 2); b.castShadow = b.receiveShadow = true; circleG.add(b);
       if (n % 4 === 0) { const cap = new THREE.Mesh(new THREE.BoxGeometry(w * 0.5, 2.2, d * 0.5), roofM); cap.position.set(b.position.x, h + 1.1, b.position.z); circleG.add(cap); }
     }
-  })();
+  }]);
 
   // ---- traffic: every vehicle follows a route in → around the ring (counter-clockwise) → out ----
   function lanePt(phi, s, off, incoming) {
@@ -2054,7 +2058,7 @@
     [-0.13, 0.13].forEach(z => rod(g, V(-0.05, 1.0, z), V(0.36, 0.95, z * 1.4), 0.035, M(shirt)));
     circleG.add(g); return g;
   }
-  (function () {
+  LAZY.push(['circle', function () {
     const carCols = [[0xF2C12E, true], [0xF2C12E, true], [0xF4F1EA, false], [0xB8BEC4, false], [0x2B2D33, false], [0xC8453A, false], [0x2F5F8A, false], [0xF2C12E, true]];
     const scoCols = [0xF4F1EA, 0x3A9AD9, 0xC8453A, 0x6BBF59, 0x2B2D33, 0xE58C3A];
     let n = 0;
@@ -2080,7 +2084,7 @@
     circleG.add(bus);
     const busR = buildRoute(2, 0, 1.5, 8.05);
     vehicles.push({ obj: bus, rt: busR, s0: 40, v: 5.4 });
-  })();
+  }]);
   const _pa = new THREE.Vector3(), _pb = new THREE.Vector3();
   function updateCircle(t) {
     vehicles.forEach(vh => {
@@ -2110,7 +2114,7 @@
   // ---------- Kyoto garden scene (銀閣寺) ----------
   const kyotoG = new THREE.Group(); kyotoG.visible = false; scene.add(kyotoG);
   const koi = [], leaves = [];
-  (function () {
+  LAZY.push(['kyoto', function () {
     const moss = new THREE.Mesh(new THREE.CircleGeometry(260, 48), M(0x6E8A45)); moss.rotation.x = -Math.PI / 2; moss.position.y = -0.01; moss.receiveShadow = true; kyotoG.add(moss);
     const gravel = new THREE.Mesh(new THREE.RingGeometry(5.0, 7.1, 96, 1), M(0xB3AC9E)); gravel.rotation.x = -Math.PI / 2; gravel.position.y = 0.01; gravel.receiveShadow = true; kyotoG.add(gravel);
     // 銀沙灘: raked sand — straight wave ridges, with rings raked round the cone
@@ -2229,7 +2233,7 @@
       leaves.push({ m: lf, a: (r1 - Math.floor(r1)) * Math.PI * 2, r: 3 + (r2 - Math.floor(r2)) * 11, ph: (r1 * 3 - Math.floor(r1 * 3)) });
       kyotoG.add(lf);
     }
-  })();
+  }]);
   function updateKyoto(t) {
     koi.forEach(({ f, k }) => {
       const a = t * (0.25 + k * 0.03) * (k % 2 ? 1 : -1) + k * 1.1, rx = 1.3 + (k % 3) * 0.5, rz = 0.8 + (k % 2) * 0.5;
@@ -2248,7 +2252,7 @@
   // ---------- Place Charles-de-Gaulle (凱旋門): twelve avenues, no lane lines, glorious chaos ----------
   const parisG = new THREE.Group(); parisG.visible = false; scene.add(parisG);
   const parisTraffic = [];
-  (function () {
+  LAZY.push(['paris', function () {
     const AV = [], N = 12, HW = 2.8, SIDE = 3.8;
     for (let i = 0; i < N; i++) AV.push(i / N * Math.PI * 2 + 0.26);
     const stone = M(0xE2D6BC), stone2 = M(0xCFC3A8), stoneD = M(0xBFB39A);
@@ -2362,7 +2366,7 @@
         parisTraffic.push({ obj: sc, rt, s0: (i * 29) % rt.len, v: 6.8 });
       }
     }
-  })();
+  }]);
   // beret + baguette (Paris only)
   const parisGear = [];
   (function () {
@@ -2404,7 +2408,7 @@
     [-1, 1].forEach(sd => { const h = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 4, 10, Math.PI), bagM); h.position.set(sd * 0.05, -0.14, 0); g.add(h); });
     g.scale.setScalar(sc || 1); return g;
   }
-  (function () {
+  LAZY.push(['wetmarket', function () {
     const conc = new THREE.Mesh(new THREE.CircleGeometry(200, 48), M(0x9A9890)); conc.rotation.x = -Math.PI / 2; conc.position.y = -0.01; conc.receiveShadow = true; wetG.add(conc);
     const aisle = new THREE.Mesh(new THREE.RingGeometry(4.9, 7.2, 96, 1), M(0x8A8880)); aisle.rotation.x = -Math.PI / 2; aisle.position.y = 0.005; aisle.receiveShadow = true; wetG.add(aisle);
     [[0.5, 6.4, 0.7], [2.2, 5.6, 0.5], [3.4, 6.8, 0.6], [4.7, 5.9, 0.8], [5.8, 6.3, 0.45]].forEach(([a, r, s]) => { const pd = new THREE.Mesh(new THREE.CircleGeometry(s, 16), new THREE.MeshStandardMaterial({ color: 0x6A6862, roughness: 0.08, metalness: 0.35 })); pd.rotation.x = -Math.PI / 2; pd.scale.set(1.5, 1, 1); pd.position.set(Math.cos(a) * r, 0.012, Math.sin(a) * r); wetG.add(pd); });
@@ -2515,7 +2519,7 @@
       makeBag(sc, V(0.45, 0.9, 0.15), 0.9);
       wmScooters.push({ sc, a0, r, v });
     });
-  })();
+  }]);
   // bamboo hat + a basket stuffed with cabbages (wet market only)
   const wetGear = [];
   (function () {
@@ -2548,7 +2552,7 @@
     const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#0B0F1E'); gr.addColorStop(0.5, '#15121A'); gr.addColorStop(1, '#1A1410');
     g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
   })();
-  (function () {
+  LAZY.push(['library', function () {
     const floor = new THREE.Mesh(new THREE.CircleGeometry(120, 48), M(0x3A2A20)); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.01; floor.receiveShadow = true; libG.add(floor);
     const runner = new THREE.Mesh(new THREE.RingGeometry(5.0, 7.0, 120, 1), M(0x6E2A2A, { roughness: 1 })); runner.rotation.x = -Math.PI / 2; runner.position.y = 0.01; runner.receiveShadow = true; libG.add(runner);
     [5.15, 6.85].forEach(r => { const b = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.05, 120, 1), M(0xC9A04A, { metalness: 0.4 })); b.rotation.x = -Math.PI / 2; b.position.y = 0.015; libG.add(b); });
@@ -2646,7 +2650,7 @@
     const mgeo = new THREE.BufferGeometry(); mgeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mp), 3));
     libMoonText = new THREE.Points(mgeo, new THREE.PointsMaterial({ color: 0xDDE8FF, size: 0.035, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
     const mb = libBooks[3].bk; libMoonText.position.copy(mb.position).add(V(0, 0.55, 0)); libMoonText.rotation.y = mb.rotation.y; libG.add(libMoonText);
-  })();
+  }]);
   // a scarf for the library
   const libGear = [], libTails = [];
   (function () {
@@ -2684,10 +2688,124 @@
   }
 
   ENV.library = { sky: libTex, fog: 0x14100C, near: 10, far: 48, sun: 0x9FB4E0, sunI: 0.55, hemi: 0.35, hemiSky: 0x6A6A90, hemiGround: 0x3A2A1E };
+  // ---------- rain (雨天): out of the library door and into the rain, without waiting for it to stop ----------
+  // This one was on the very first wish-list (after the school field) and nobody picked it — until Kimi asked.
+  const rainG = new THREE.Group(); rainG.visible = false; scene.add(rainG);
+  const ripples = [], rainState = {};
+  const rainTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#10161F'); gr.addColorStop(0.45, '#1E2733'); gr.addColorStop(0.5, '#2A3340'); gr.addColorStop(1, '#141A22');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  LAZY.push(['rain', function () {
+    // wet, glossy asphalt and a small park island in the middle
+    const road = new THREE.Mesh(new THREE.CircleGeometry(200, 64), new THREE.MeshStandardMaterial({ color: 0x1E2228, roughness: 0.18, metalness: 0.45 })); road.rotation.x = -Math.PI / 2; road.position.y = -0.01; road.receiveShadow = true; rainG.add(road);
+    for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, d = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.08), M(0xB8BEC4)); d.rotation.x = -Math.PI / 2; d.rotation.z = a + Math.PI / 2; d.position.set(Math.cos(a) * 7.3, 0.01, Math.sin(a) * 7.3); rainG.add(d); }
+    const park = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 4.5, 0.2, 40), M(0x2F4A2E)); park.position.y = 0.1; rainG.add(park);
+    const curb = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.1, 4, 64), M(0x8A8C90)); curb.rotation.x = Math.PI / 2; curb.position.y = 0.18; rainG.add(curb);
+    const tree = new THREE.Group(); rainG.add(tree);
+    rod(tree, V(0, 0, 0), V(0.3, 3.4, 0.1), 0.25, M(0x3A2E24)); rod(tree, V(0.2, 2.4, 0), V(1.6, 3.8, 0.6), 0.14, M(0x3A2E24)); rod(tree, V(0.2, 2.6, 0), V(-1.3, 4.0, -0.4), 0.12, M(0x3A2E24));
+    [[0.3, 4.4, 0.1, 2.2], [1.6, 4.2, 0.6, 1.4], [-1.3, 4.4, -0.4, 1.5], [0.6, 5.2, -0.8, 1.3]].forEach(([x, y, z, r], k) => facet(tree, M(k % 2 ? 0x2F4A2A : 0x3A5A32), V(x, y, z), [r, r * 0.7, r], [0, k, 0], 1));
+    // bench with the market cat sheltering underneath
+    const bench = new THREE.Group(); bench.position.set(1.8, 0.2, 2.2); bench.rotation.y = -0.9; rainG.add(bench);
+    [0, 0.18, 0.36].forEach(z => { const sl = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.14), M(0x6E4A2E)); sl.position.set(0, 0.5, z - 0.18); bench.add(sl); });
+    const bk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.35, 0.05), M(0x6E4A2E)); bk.position.set(0, 0.8, -0.3); bench.add(bk);
+    [-0.7, 0.7].forEach(x => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.5), M(0x2B2D33)); l.position.set(x, 0.25, -0.05); bench.add(l); });
+    const cat = new THREE.Group(); cat.position.set(0.1, 0.02, 0); bench.add(cat);
+    const curl = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.13, 8, 16, Math.PI * 1.6), M(0xE09A4E)); curl.rotation.x = Math.PI / 2; curl.position.y = 0.1; cat.add(curl);
+    facet(cat, M(0xE09A4E), V(0.2, 0.14, 0.06), [0.13, 0.11, 0.12], null, 1);
+    [-1, 1].forEach(sd => { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.08, 4), M(0xE09A4E)); ear.position.set(0.22, 0.26, 0.06 + sd * 0.06); cat.add(ear); });
+    // the library we just came out of: columns, pediment, warm windows, the door left open
+    const lib = new THREE.Group(); lib.position.set(0, 0, -15); rainG.add(lib);
+    const stoneL = M(0x8A8478), stoneD = M(0x6E6A62);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(18, 7, 5), stoneL); body.position.y = 3.5; lib.add(body);
+    for (let k = 0; k < 3; k++) { const st = new THREE.Mesh(new THREE.BoxGeometry(10 - k * 0.6, 0.3, 1.2 - k * 0.3), stoneD); st.position.set(0, 0.15 + k * 0.3, 3.1 - k * 0.3); lib.add(st); }
+    for (let k = 0; k < 6; k++) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 5.4, 12), stoneL); c.position.set(-4 + k * 1.6, 3.6, 2.9); c.castShadow = true; lib.add(c); }
+    const ent = new THREE.Mesh(new THREE.BoxGeometry(10, 0.5, 1.4), stoneL); ent.position.set(0, 6.5, 2.9); lib.add(ent);
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 5.6, 1.6, 3, 1), stoneL); ped.rotation.set(Math.PI / 2, 0, 0); ped.rotation.order = 'XZY'; ped.scale.set(1, 0.8, 1); ped.position.set(0, 7.5, 2.9); ped.rotation.z = Math.PI; lib.add(ped);
+    const warm = new THREE.MeshBasicMaterial({ color: 0xFFC878 });
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 3.0), warm); door.position.set(0, 2.4, 2.51); lib.add(door);
+    for (let k = 0; k < 8; k++) { if (k === 3 || k === 4) continue; [2.6, 5.2].forEach(y => { const w = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.4), (k + y) % 3 ? warm : new THREE.MeshBasicMaterial({ color: 0x3A3024 })); w.position.set(-7.6 + k * 2.15, y, 2.51); lib.add(w); }); }
+    const spill = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 6), new THREE.MeshBasicMaterial({ map: radialTex([[0, 'rgba(255,200,120,0.55)'], [1, 'rgba(255,200,120,0)']]), transparent: true, depthWrite: false })); spill.rotation.x = -Math.PI / 2; spill.position.set(0, 0.02, 6); lib.add(spill);
+    const doorL = new THREE.PointLight(0xFFC070, 1.2, 12, 2); doorL.position.set(0, 2.5, 4.5); lib.add(doorL);
+    // the rest of the street: dark blocks with a few windows still lit
+    const wc = document.createElement('canvas'); wc.width = 64; wc.height = 128; const wg = wc.getContext('2d'); wg.fillStyle = '#000'; wg.fillRect(0, 0, 64, 128);
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 4; x++) { const r = Math.sin((x + 3) * 71.7 + (y + 1) * 19.3) * 999; if (r - Math.floor(r) < 0.62) continue; wg.fillStyle = (r * 7 % 1) > 0.4 ? '#FFD28A' : '#9FC0E0'; wg.fillRect(x * 16 + 4, y * 16 + 4, 8, 9); }
+    const wt = new THREE.CanvasTexture(wc); wt.wrapS = wt.wrapT = THREE.RepeatWrapping;
+    for (let i = 0; i < 16; i++) { const a = Math.PI * 0.62 + i / 16 * Math.PI * 1.76, r = 20 + (i % 3) * 4, h = 8 + (i % 4) * 3, w = 7; const t = wt.clone(); t.needsUpdate = true; t.repeat.set(w / 5, h / 6); const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, 5), new THREE.MeshStandardMaterial({ color: 0x1E2430, emissive: 0xFFFFFF, emissiveMap: t, emissiveIntensity: 0.8, roughness: 1 })); b.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r); b.rotation.y = Math.atan2(-b.position.x, -b.position.z); rainG.add(b); }
+    // street lamps: warm pools of light, visible cones in the rain
+    const haloT = radialTex([[0, 'rgba(255,210,140,0.9)'], [0.3, 'rgba(255,190,120,0.3)'], [1, 'rgba(255,180,110,0)']]);
+    rainState.lampPos = [];
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * Math.PI * 2 + 0.5, x = Math.cos(a) * 8.2, z = Math.sin(a) * 8.2;
+      const p = cyl(0.07, M(0x2B2D33), 8); p.scale.y = 4.4; p.position.set(x, 2.2, z); rainG.add(p);
+      const arm = rod(rainG, V(x, 4.3, z), V(Math.cos(a) * 7.4, 4.4, Math.sin(a) * 7.4), 0.05, M(0x2B2D33));
+      const lp = V(Math.cos(a) * 7.4, 4.25, Math.sin(a) * 7.4);
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.3, 0.25, 10), M(0x2B2D33)); head.position.copy(lp).add(V(0, 0.12, 0)); rainG.add(head);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 6), new THREE.MeshBasicMaterial({ color: 0xFFE2B0 })); bulb.position.copy(lp); rainG.add(bulb);
+      const hs = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloT, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); hs.position.copy(lp); hs.scale.setScalar(2.4); rainG.add(hs);
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(1.8, 4.2, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xFFD9A0, transparent: true, opacity: 0.06, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })); cone.position.copy(lp).add(V(0, -2.1, 0)); rainG.add(cone);
+      const pl = new THREE.PointLight(0xFFC88A, 0.9, 8, 2); pl.position.copy(lp).add(V(0, -0.3, 0)); rainG.add(pl);
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(1.6, 24), new THREE.MeshBasicMaterial({ map: radialTex([[0, 'rgba(255,200,130,0.35)'], [1, 'rgba(255,200,130,0)']]), transparent: true, depthWrite: false })); pool.rotation.x = -Math.PI / 2; pool.position.set(lp.x, 0.02, lp.z); rainG.add(pool);
+      rainState.lampPos.push(lp);
+    }
+    // puddles with ripples
+    const rippleM = new THREE.MeshBasicMaterial({ color: 0xB8C8D8, transparent: true, opacity: 0.5, depthWrite: false });
+    for (let i = 0; i < 26; i++) {
+      const a = i * 2.39996, r = 5.1 + (i % 7) * 0.3 + (i % 2 ? 2.4 : 0), x = Math.cos(a) * r, z = Math.sin(a) * r;
+      if (i % 3 === 0) { const pd = new THREE.Mesh(new THREE.CircleGeometry(0.5 + (i % 4) * 0.2, 18), new THREE.MeshStandardMaterial({ color: 0x2A3440, roughness: 0.02, metalness: 0.6 })); pd.rotation.x = -Math.PI / 2; pd.scale.set(1.5, 1, 1); pd.position.set(x, 0.012, z); rainG.add(pd); }
+      const rg = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 20), rippleM.clone()); rg.rotation.x = -Math.PI / 2; rg.position.set(x, 0.02, z); rainG.add(rg); ripples.push({ rg, ph: i * 0.37 });
+    }
+    // the rain itself: three thousand thin streaks, brighter where light falls on them
+    const N = 3200, streaks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.012, 0.55, 0.012), new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.55, depthWrite: false }), N);
+    const base = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, w = Math.sin(i * 39.42) * 9631.7; const a = (u - Math.floor(u)) * Math.PI * 2, r = Math.sqrt(v - Math.floor(v)) * 13; base.set([Math.cos(a) * r, (w - Math.floor(w)) * 11, Math.sin(a) * r], i * 3); streaks.setColorAt(i, new THREE.Color(0x6E7E90)); }
+    streaks.frustumCulled = false; rainG.add(streaks); rainState.streaks = streaks; rainState.base = base;
+  }]);
+  // the pelican's gear for the rain: a clear convenience-store umbrella clamped to the handlebar, and a headlight
+  const rainGear = []; let headlight = null, hlTarget = null;
+  (function () {
+    const g = new THREE.Group(); lean.add(g); rainGear.push(g);
+    rod(g, V(0.56, 1.3, 0.12), V(0.1, 3.05, 0.05), 0.018, M(0xDDE2E6));
+    const clear = new THREE.MeshStandardMaterial({ color: 0xE8F2FA, transparent: true, opacity: 0.34, roughness: 0.05, metalness: 0.1, side: THREE.DoubleSide, depthWrite: false });
+    const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.15, 0.45, 8, 1, true), clear); canopy.position.set(0.1, 3.05, 0.05); g.add(canopy);
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; rod(g, V(0.1, 3.27, 0.05), V(0.1 + Math.cos(a) * 1.15, 2.83, 0.05 + Math.sin(a) * 1.15), 0.008, M(0xF4F4F4)); }
+    facet(g, M(0xDDE2E6), V(0.1, 3.3, 0.05), [0.03, 0.05, 0.03], null, 0);
+    const lampH = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.1, 10), new THREE.MeshBasicMaterial({ color: 0xFFF6DA })); lampH.rotation.z = Math.PI / 2; lampH.position.set(0.98, 1.02, 0); g.add(lampH);
+    headlight = new THREE.SpotLight(0xFFF2D0, 2.2, 16, 0.42, 0.5, 1.4); headlight.position.set(1.0, 1.02, 0); g.add(headlight);
+    hlTarget = new THREE.Object3D(); hlTarget.position.set(6, -0.8, 0); g.add(hlTarget); headlight.target = hlTarget;
+    rainState.drips = [];
+    for (let k = 0; k < 8; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 4), new THREE.MeshBasicMaterial({ color: 0xDDEBF5, transparent: true, opacity: 0.8 })); g.add(d); rainState.drips.push(d); }
+    g.visible = false;
+  })();
+  const _hp = new THREE.Vector3(), _hd = new THREE.Vector3(), _q = new THREE.Vector3(), _m4r = new THREE.Matrix4(), _c = new THREE.Color();
+  const rainDim = new THREE.Color(0x5E6E80), rainLit = new THREE.Color(0xFFF4DA), rainWarm = new THREE.Color(0xFFD8A0);
+  function updateRain(t) {
+    const st = rainState.streaks, base = rainState.base;
+    headlight.getWorldPosition(_hp); hlTarget.getWorldPosition(_hd); _hd.sub(_hp).normalize();
+    const cosCone = Math.cos(0.42);
+    for (let i = 0; i < st.count; i++) {
+      const x = base[i * 3] + rider.position.x * 0.35, z = base[i * 3 + 2] + rider.position.z * 0.35;
+      let y = base[i * 3 + 1] - t * 13; y = ((y % 11) + 11) % 11;
+      _m4r.makeRotationZ(0.08); _m4r.setPosition(x, y, z); st.setMatrixAt(i, _m4r);
+      // a drop glows when it falls through the headlight's cone or near a street lamp
+      _q.set(x, y, z).sub(_hp); const dist = _q.length(); let glow = 0;
+      if (dist < 9) { const c = _q.dot(_hd) / (dist || 1); if (c > cosCone) glow = (1 - dist / 9) * Math.min(1, (c - cosCone) / 0.08); }
+      let warm = 0; for (const lp of rainState.lampPos) { const dx = x - lp.x, dz = z - lp.z; if (y < lp.y && dx * dx + dz * dz < 2.6) { warm = Math.max(warm, 0.8 * (1 - y / lp.y * 0.4)); } }
+      _c.copy(rainDim).lerp(rainWarm, warm).lerp(rainLit, glow);
+      st.setColorAt(i, _c);
+    }
+    st.instanceMatrix.needsUpdate = true; st.instanceColor.needsUpdate = true;
+    ripples.forEach(r => { const u = (t * 0.9 + r.ph) % 1; r.rg.scale.setScalar(0.05 + u * 0.4); r.rg.material.opacity = (1 - u) * 0.55; });
+    rainState.drips.forEach((d, k) => { const a = k / 8 * Math.PI * 2, u = (t * 1.3 + k * 0.37) % 1; d.position.set(0.1 + Math.cos(a) * 1.12, 2.8 - u * 2.6, 0.05 + Math.sin(a) * 1.12); d.visible = u < 0.95; });
+  }
+
+  ENV.rain = { sky: rainTex, fog: 0x1A222C, near: 9, far: 55, sun: 0x8FA0C0, sunI: 0.3, hemi: 0.5, hemiSky: 0x7A8AA0, hemiGround: 0x2A3038 };
   ENV.wet = { sky: morningTex, fog: 0xDCE6EC, near: 30, far: 120, sun: 0xFFF0D8, sunI: 1.0, hemi: 0.8, hemiSky: 0xE6F0FA, hemiGround: 0x9A9080 };
   let sceneName = 'island';
   const islandOnly = [island, sea, glint];
   function setScene(name) {
+    buildScene(name);
     sceneName = name;
     islandOnly.forEach(o => { o.visible = name === 'island'; });
     school.visible = name === 'school';
@@ -2702,15 +2820,16 @@
     moonG.visible = name === 'moon'; spaceGear.forEach(o => { o.visible = name === 'moon' || name === 'space'; });
     spaceG.visible = name === 'space';
     homeG.visible = name === 'home';
+    rainG.visible = name === 'rain'; rainGear.forEach(o => { o.visible = name === 'rain'; });
     libG.visible = name === 'library'; libGear.forEach(o => { o.visible = name === 'library'; });
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library';
-    setEnv(isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain';
+    setEnv(isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain; });
+    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain; });
+    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -2748,7 +2867,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -2815,15 +2934,15 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain'].includes(location.hash)) applyScene(location.hash.slice(1));
   // editing the #hash by hand now switches scenes too (bug spotted by Kimi)
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SCENE_LABEL[h] && h !== sceneName) applyScene(h); });
   const btnMusic = document.getElementById('music');
