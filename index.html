@@ -1764,6 +1764,149 @@
     const bOn = Math.sin(t * 0.45) > 0.55; beam.visible = bOn; if (bOn) beam.material.opacity = 0.12 + Math.sin(t * 8) * 0.05;
   }
 
+  // ---------- home (家): a sunny living room with a dog, three cats and a baby ----------
+  const homeG = new THREE.Group(); homeG.visible = false; scene.add(homeG);
+  let dog = null, baby = null, clockHands = null, catTail = null, yarnCat = null, yarn = null, winCat = null;
+  (function () {
+    const RM = 11, WH = 7;
+    // wooden floor
+    const fc = document.createElement('canvas'); fc.width = 256; fc.height = 256; const fg = fc.getContext('2d');
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 2; c++) { const tone = 170 + ((r * 7 + c * 3) % 5) * 9; fg.fillStyle = `rgb(${tone},${Math.round(tone * 0.72)},${Math.round(tone * 0.48)})`; fg.fillRect(c * 128 + (r % 2) * 64, r * 32, 128, 32); fg.fillRect((c * 128 + (r % 2) * 64) - 256, r * 32, 128, 32); }
+    fg.strokeStyle = 'rgba(80,50,30,0.35)'; fg.lineWidth = 2; for (let r = 0; r <= 8; r++) { fg.beginPath(); fg.moveTo(0, r * 32); fg.lineTo(256, r * 32); fg.stroke(); }
+    const ft = new THREE.CanvasTexture(fc); ft.wrapS = ft.wrapT = THREE.RepeatWrapping; ft.repeat.set(5, 5);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(RM * 2, RM * 2), new THREE.MeshStandardMaterial({ map: ft, roughness: 0.6 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; homeG.add(floor);
+    // round rug
+    const rc = document.createElement('canvas'); rc.width = rc.height = 512; const rg = rc.getContext('2d');
+    ['#C8674A', '#F0DDB8', '#6E8F7A', '#F0DDB8', '#D9A456', '#F0DDB8', '#C8674A'].forEach((col, i) => { rg.fillStyle = col; rg.beginPath(); rg.arc(256, 256, 256 - i * 34, 0, 7); rg.fill(); });
+    const rug = new THREE.Mesh(new THREE.CircleGeometry(7.4, 64), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(rc), roughness: 1 })); rug.rotation.x = -Math.PI / 2; rug.position.y = 0.012; rug.receiveShadow = true; homeG.add(rug);
+    // walls (single-sided, facing in, so the camera can look in from outside)
+    const wallM = new THREE.MeshStandardMaterial({ color: 0xF1E6D2, roughness: 0.95 }), trim = M(0xFFFFFF);
+    [[0, -RM, 0], [RM, 0, -Math.PI / 2], [0, RM, Math.PI], [-RM, 0, Math.PI / 2]].forEach(([x, z, ry]) => {
+      const w = new THREE.Mesh(new THREE.PlaneGeometry(RM * 2, WH), wallM); w.position.set(x, WH / 2, z); w.rotation.y = ry; w.receiveShadow = true; homeG.add(w);
+      const bb = new THREE.Mesh(new THREE.PlaneGeometry(RM * 2, 0.3), trim); bb.position.set(x * 0.998, 0.15, z * 0.998); bb.rotation.y = ry; homeG.add(bb);
+    });
+    // window on the +x wall with curtains and a view of sky
+    const win = new THREE.Group(); win.position.set(RM - 0.02, 3.4, 1.5); win.rotation.y = -Math.PI / 2; homeG.add(win);
+    const skyV = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 3.2), new THREE.MeshBasicMaterial({ color: 0xBFE3F5 })); win.add(skyV);
+    facet(win, new THREE.MeshBasicMaterial({ color: 0x9CCB7A }), V(-1.2, -1.3, -0.3), [1.4, 0.8, 0.1], null, 1); facet(win, new THREE.MeshBasicMaterial({ color: 0xFFFFFF }), V(0.8, 0.9, -0.2), [0.8, 0.3, 0.1], null, 1);
+    [[0, 1.65, 4.5, 0.14], [0, -1.65, 4.5, 0.14], [-2.18, 0, 0.14, 3.4], [2.18, 0, 0.14, 3.4], [0, 0, 0.1, 3.3], [0, 0, 4.3, 0.1]].forEach(([x, y, w, h]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.12), trim); b.position.set(x, y, 0.04); win.add(b); });
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.14, 0.8), trim); sill.position.set(0, -1.75, 0.35); win.add(sill);
+    [-1, 1].forEach(sd => { const cg = new THREE.PlaneGeometry(1.4, 4.2, 10, 1), cp = cg.attributes.position; for (let i = 0; i < cp.count; i++) cp.setZ(i, Math.sin(cp.getX(i) * 9) * 0.08); cg.computeVertexNormals(); const cur = new THREE.Mesh(cg, new THREE.MeshStandardMaterial({ color: 0xE8C9A0, side: THREE.DoubleSide, roughness: 1, flatShading: true })); cur.position.set(sd * 2.8, 0.2, 0.25); win.add(cur); });
+    // cat on the windowsill, watching the birds outside
+    winCat = new THREE.Group(); winCat.position.set(0.6, -1.66, 0.4); win.add(winCat);
+    function catBody(g, col, col2) { facet(g, M(col), V(0, 0.28, 0), [0.28, 0.3, 0.24], null, 1); const hd = new THREE.Group(); hd.position.set(0, 0.68, 0.02); g.add(hd); facet(hd, M(col), V(0, 0, 0), [0.19, 0.17, 0.17], null, 1); [-1, 1].forEach(sd => { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 4), M(col)); ear.position.set(sd * 0.11, 0.17, 0); hd.add(ear); facet(hd, M(0x3FA36A), V(sd * 0.07, 0.03, 0.15), [0.03, 0.035, 0.02], null, 0); }); facet(hd, M(0xE89AA0), V(0, -0.03, 0.17), [0.025, 0.02, 0.02], null, 0); if (col2) facet(g, M(col2), V(0, 0.25, 0.18), [0.16, 0.2, 0.08], null, 1); return hd; }
+    winCat.userData.head = catBody(winCat, 0x3A3A3E, 0xF4F1EA);
+    rod(winCat, V(0, 0.08, -0.2), V(0.35, 0.02, -0.35), 0.035, M(0x3A3A3E));
+    winCat.rotation.y = Math.PI; winCat.scale.setScalar(1.3);
+    // sofa on the -z wall, with a sleeping ginger cat
+    const sofa = new THREE.Group(); sofa.position.set(0, 0, -RM + 1.4); homeG.add(sofa);
+    const fab = M(0x5E7A8C, { roughness: 1 }), fab2 = M(0x6E8A9C, { roughness: 1 });
+    const sb = new THREE.Mesh(new THREE.BoxGeometry(6, 0.9, 2.2), fab); sb.position.y = 0.6; sb.castShadow = true; sofa.add(sb);
+    const sbk = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 0.6), fab); sbk.position.set(0, 1.4, -0.8); sbk.castShadow = true; sofa.add(sbk);
+    [-1, 1].forEach(sd => { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.1, 2.2), fab); arm.position.set(sd * 3.1, 0.95, 0); sofa.add(arm); });
+    [-1.9, 0, 1.9].forEach(x => { const c = facet(sofa, fab2, V(x, 1.15, 0.15), [0.92, 0.16, 0.95], null, 1); });
+    [[-2.2, 0xD9A456], [2.1, 0xC8674A]].forEach(([x, col]) => facet(sofa, M(col), V(x, 1.55, -0.35), [0.4, 0.35, 0.14], [0, 0, 0.2], 1));
+    const sleeper = new THREE.Group(); sleeper.position.set(0.9, 1.32, 0.1); sofa.add(sleeper);
+    const curl = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.2, 8, 16, Math.PI * 1.6), M(0xE09A4E)); curl.rotation.x = Math.PI / 2; curl.scale.z = 0.8; sleeper.add(curl);
+    facet(sleeper, M(0xE09A4E), V(0.32, 0.06, 0.1), [0.2, 0.16, 0.18], null, 1);
+    [-1, 1].forEach(sd => { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), M(0xE09A4E)); ear.position.set(0.34, 0.22, 0.1 + sd * 0.1); sleeper.add(ear); });
+    catTail = new THREE.Group(); catTail.position.set(-0.1, 0.02, -0.34); sleeper.add(catTail); rod(catTail, V(0, 0, 0), V(0.5, 0.05, -0.1), 0.05, M(0xC8803A));
+    // floor lamp
+    const lamp = new THREE.Group(); lamp.position.set(-4.4, 0, -RM + 1.2); homeG.add(lamp);
+    const lp = cyl(0.05, M(0x2B2D33), 8); lp.scale.y = 4; lp.position.y = 2; lamp.add(lp);
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, 0.8, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0xF4E4C0, emissive: 0xE8B860, emissiveIntensity: 0.6, side: THREE.DoubleSide })); shade.position.y = 4.1; lamp.add(shade);
+    const pl = new THREE.PointLight(0xFFD29A, 0.8, 9, 2); pl.position.y = 3.8; lamp.add(pl);
+    // TV cabinet on the +z wall; the TV is showing the lighthouse island
+    const tvc = new THREE.Mesh(new THREE.BoxGeometry(5, 0.9, 1.1), M(0x8A6240)); tvc.position.set(0, 0.45, RM - 0.7); tvc.castShadow = true; homeG.add(tvc);
+    const tc = document.createElement('canvas'); tc.width = 256; tc.height = 144; const tg = tc.getContext('2d');
+    const tgr = tg.createLinearGradient(0, 0, 0, 144); tgr.addColorStop(0, '#3F7FAE'); tgr.addColorStop(0.55, '#F4C68C'); tgr.addColorStop(0.56, '#2F7C95'); tgr.addColorStop(1, '#2F7C95'); tg.fillStyle = tgr; tg.fillRect(0, 0, 256, 144);
+    tg.fillStyle = '#E9D2A2'; tg.beginPath(); tg.ellipse(128, 118, 90, 18, 0, 0, 7); tg.fill();
+    for (let k = 0; k < 5; k++) { tg.fillStyle = k % 2 ? '#C8453A' : '#F4F1EA'; tg.fillRect(122 + k * 0.6, 60 + k * 10, 12 - k * 1.2, 10); }
+    tg.fillStyle = '#F4F1EA'; tg.beginPath(); tg.ellipse(170, 96, 7, 5, 0, 0, 7); tg.fill(); tg.fillStyle = '#F0B24A'; tg.fillRect(176, 94, 12, 3);
+    const tv = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.1, 0.12), [M(0x16181B), M(0x16181B), M(0x16181B), M(0x16181B), M(0x16181B), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(tc) })]);
+    tv.position.set(0, 2.2, RM - 0.8); homeG.add(tv);
+    // bookshelf on the -x wall
+    const shelf = new THREE.Group(); shelf.position.set(-RM + 0.5, 0, -3); shelf.rotation.y = Math.PI / 2; homeG.add(shelf);
+    const sw = M(0xB08058);
+    [[0, 2.5, 3.4, 5, 0.9]].forEach(() => { [-1.7, 1.7].forEach(x => { const p = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5, 0.8), sw); p.position.set(x, 2.5, 0); shelf.add(p); }); });
+    const bookC = [0xC8453A, 0x2F5F8A, 0xD9A456, 0x3A7A5A, 0x8C2F39, 0xF4F1EA, 0x5B4A8A, 0xE58C3A];
+    for (let lv = 0; lv < 5; lv++) { const b = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.08, 0.8), sw); b.position.set(0, 0.1 + lv * 1.2, 0); shelf.add(b); if (lv < 4) { let x = -1.55; let k = lv * 3; while (x < 1.4) { const w = 0.14 + (k % 3) * 0.05, h = 0.7 + (k % 4) * 0.1; const bk = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.55), M(bookC[k % bookC.length])); bk.position.set(x + w / 2, 0.14 + lv * 1.2 + h / 2, 0.05); bk.rotation.z = (k % 7 === 0) ? 0.15 : 0; shelf.add(bk); x += w + 0.02; k++; } } }
+    // cat batting a ball of yarn by the bookshelf
+    yarnCat = new THREE.Group(); yarnCat.position.set(-8.3, 0, -0.6); yarnCat.rotation.y = Math.PI / 2; homeG.add(yarnCat);
+    yarnCat.userData.head = catBody(yarnCat, 0xB8B0A4, 0xF4F1EA);
+    const paw = new THREE.Group(); paw.position.set(0.12, 0.35, 0.15); yarnCat.add(paw); rod(paw, V(0, 0, 0), V(0, -0.28, 0.2), 0.045, M(0xB8B0A4)); yarnCat.userData.paw = paw;
+    yarnCat.scale.setScalar(1.4);
+    const yc = document.createElement('canvas'); yc.width = 64; yc.height = 32; const yg = yc.getContext('2d'); yg.fillStyle = '#C8453A'; yg.fillRect(0, 0, 64, 32); yg.strokeStyle = '#8C2F2A'; yg.lineWidth = 2; for (let k = 0; k < 10; k++) { yg.beginPath(); yg.moveTo(k * 7, 0); yg.lineTo(k * 7 + 16, 32); yg.stroke(); }
+    yarn = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 10), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(yc), roughness: 1 })); yarn.castShadow = true; homeG.add(yarn);
+    // plants, frames, wall clock
+    [[RM - 1.2, -RM + 1.2], [-RM + 1.2, RM - 1.2], [RM - 1.2, RM - 2.2]].forEach(([x, z], k) => { const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.35, 0.8, 10), M(k % 2 ? 0xC8674A : 0xE8E2D4)); pot.position.set(x, 0.4, z); homeG.add(pot); for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + k; rod(homeG, V(x, 0.7, z), V(x + Math.cos(a) * 0.4, 1.6 + (i % 3) * 0.3, z + Math.sin(a) * 0.4), 0.02, M(0x3C6B30)); feather(homeG, M(i % 2 ? 0x3C6B30 : 0x4E7F37), V(x + Math.cos(a) * 0.4, 1.6 + (i % 3) * 0.3, z + Math.sin(a) * 0.4), V(Math.cos(a), 0.3, Math.sin(a)), V(0, 1, 0), 0.9, 0.55); } });
+    const frameCols = [['#F2C14E', '#3A7A9A'], ['#C8674A', '#F0DDB8'], ['#6E8F7A', '#F4F1EA']];
+    frameCols.forEach(([a, b], k) => { const c = document.createElement('canvas'); c.width = 64; c.height = 80; const g = c.getContext('2d'); g.fillStyle = b; g.fillRect(0, 0, 64, 80); g.fillStyle = a; g.beginPath(); g.arc(32, 36 + k * 6, 18 - k * 3, 0, 7); g.fill(); g.fillRect(0, 60 - k * 4, 64, 20 + k * 4); const fr = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 0.08), [M(0x2B2D33), M(0x2B2D33), M(0x2B2D33), M(0x2B2D33), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c) }), M(0x2B2D33)]); fr.position.set(-2.2 + k * 2.2, 4.1 + (k % 2) * 0.3, -RM + 0.06); homeG.add(fr); });
+    const clk = new THREE.Group(); clk.position.set(-RM + 0.06, 5.2, 4); clk.rotation.y = Math.PI / 2; homeG.add(clk);
+    const face = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.08, 24), M(0xF7F3EA)); face.rotation.x = Math.PI / 2; clk.add(face);
+    const rimC = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.05, 6, 24), M(0x8A6240)); clk.add(rimC);
+    for (let k = 0; k < 12; k++) { const tk = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, 0.02), M(0x2B2D33)); const a = k / 12 * Math.PI * 2; tk.position.set(Math.sin(a) * 0.5, Math.cos(a) * 0.5, 0.05); tk.rotation.z = -a; clk.add(tk); }
+    clockHands = [0.3, 0.45].map((len, k) => { const h = new THREE.Group(); h.position.z = 0.06; clk.add(h); const b = new THREE.Mesh(new THREE.BoxGeometry(0.035, len, 0.02), M(k ? 0xC8453A : 0x2B2D33)); b.position.y = len / 2; h.add(b); return h; });
+    // baby on a play mat in the middle, with blocks and a rubber duck
+    const matC = [0xF2C14E, 0x3A9AD9, 0xE0452E, 0x6BBF59];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.9), M(matC[(i + j) % 4])); t.position.set(-1.35 + i * 0.9, 0.04, -1.35 + j * 0.9); t.receiveShadow = true; homeG.add(t); }
+    [[1.1, 0.8, 0xE0452E], [1.3, 0.3, 0x3A9AD9], [1.2, 0.55, 0xF2C14E, 0.28]].forEach(([x, z, col, y]) => { const bl = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), M(col)); bl.position.set(x, 0.2 + (y || 0), z); bl.rotation.y = x; bl.castShadow = true; homeG.add(bl); });
+    const duck = new THREE.Group(); duck.position.set(-1.0, 0.07, 0.9); duck.rotation.y = 0.8; homeG.add(duck);
+    facet(duck, M(0xF2C12E), V(0, 0.14, 0), [0.2, 0.14, 0.15], null, 1); facet(duck, M(0xF2C12E), V(0.13, 0.3, 0), [0.1, 0.1, 0.1], null, 1);
+    const db = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.1, 4), M(0xE58C3A)); db.rotation.z = -Math.PI / 2; db.position.set(0.25, 0.29, 0); duck.add(db);
+    baby = new THREE.Group(); baby.position.set(0, 0.07, 0); homeG.add(baby);
+    const skin = M(0xF2C9A8), onesie = M(0xF7E08A);
+    facet(baby, onesie, V(0, 0.42, 0), [0.3, 0.36, 0.26], null, 1);
+    [-1, 1].forEach(sd => { rod(baby, V(0.05, 0.12, sd * 0.13), V(0.45, 0.1, sd * 0.2), 0.1, onesie); facet(baby, skin, V(0.5, 0.1, sd * 0.2), [0.08, 0.07, 0.07], null, 1); });
+    const bh = new THREE.Group(); bh.position.set(0, 0.95, 0); baby.add(bh); baby.userData.head = bh;
+    facet(bh, skin, V(0, 0, 0), [0.28, 0.27, 0.27], null, 2);
+    facet(bh, M(0x6B4A2E), V(-0.02, 0.26, 0), [0.07, 0.05, 0.05], [0, 0, 0.6], 0);
+    [-1, 1].forEach(sd => { facet(bh, M(0x2B2D33), V(0.24, 0.04, sd * 0.1), [0.03, 0.035, 0.02], null, 0); facet(bh, M(0xF2A0A0), V(0.2, -0.07, sd * 0.16), [0.05, 0.035, 0.03], null, 0); facet(bh, skin, V(0, 0, sd * 0.27), [0.05, 0.07, 0.03], null, 0); });
+    facet(bh, M(0xD9786A), V(0.26, -0.1, 0), [0.03, 0.02, 0.05], null, 0);
+    baby.userData.arms = [-1, 1].map(sd => { const pv = new THREE.Group(); pv.position.set(0.02, 0.62, sd * 0.24); baby.add(pv); rod(pv, V(0, 0, 0), V(0.3, -0.12, 0), 0.07, onesie); facet(pv, skin, V(0.34, -0.13, 0), [0.07, 0.07, 0.07], null, 1); pv.userData.s = sd; return pv; });
+    baby.scale.setScalar(1.6);
+    // golden retriever, chasing the bike
+    dog = new THREE.Group(); homeG.add(dog);
+    const gold = M(0xD9A456), gold2 = M(0xC8903E);
+    facet(dog, gold, V(0, 0.75, 0), [0.62, 0.3, 0.27], null, 1);
+    facet(dog, gold, V(0.45, 0.82, 0), [0.28, 0.3, 0.26], null, 1);
+    const dh = new THREE.Group(); dh.position.set(0.72, 1.12, 0); dog.add(dh); dog.userData.head = dh;
+    facet(dh, gold, V(0, 0, 0), [0.24, 0.22, 0.2], null, 1);
+    facet(dh, gold2, V(0.24, -0.06, 0), [0.16, 0.1, 0.11], null, 1);
+    facet(dh, M(0x1C1D20), V(0.39, -0.02, 0), [0.045, 0.035, 0.05], null, 0);
+    [-1, 1].forEach(sd => facet(dh, M(0x1C1D20), V(0.14, 0.08, sd * 0.1), [0.025, 0.03, 0.02], null, 0));
+    const tongue = facet(dh, M(0xE8788A), V(0.28, -0.17, 0), [0.07, 0.02, 0.05], [0, 0, -0.5], 0);
+    dog.userData.ears = [-1, 1].map(sd => { const pv = new THREE.Group(); pv.position.set(-0.02, 0.12, sd * 0.17); dh.add(pv); feather(pv, gold2, V(0, 0, 0), V(-0.2, -1, sd * 0.3), V(0, 0, sd), 0.3, 0.2); pv.userData.s = sd; return pv; });
+    dog.userData.legs = [[0.42, 0.14], [0.42, -0.14], [-0.42, 0.14], [-0.42, -0.14]].map(([x, z], i) => { const pv = new THREE.Group(); pv.position.set(x, 0.6, z); dog.add(pv); rod(pv, V(0, 0, 0), V(0, -0.55, 0), 0.07, i < 2 ? gold : gold2); facet(pv, gold, V(0.03, -0.57, 0), [0.08, 0.04, 0.07], null, 0); return pv; });
+    const tl = new THREE.Group(); tl.position.set(-0.6, 0.88, 0); dog.add(tl); dog.userData.tail = tl;
+    feather(tl, gold2, V(0, 0, 0), V(-0.8, 0.8, 0), V(0, 0, 1), 0.6, 0.18);
+    dog.scale.setScalar(1.35);
+  })();
+  function updateHome(t) {
+    // the dog runs just behind the pelican, a little further out
+    const th = t * SPEED / R_PATH, ph = -th + 2.7 / R_PATH, r = R_PATH + 0.6;
+    dog.position.set(Math.cos(ph) * r, Math.abs(Math.sin(t * 7.5)) * 0.12, Math.sin(ph) * r);
+    dog.rotation.y = Math.PI / 2 - ph;
+    dog.userData.legs.forEach((l, i) => { l.rotation.z = Math.sin(t * 7.5 + (i < 2 ? 0 : 1.6) + (i % 2) * 0.4) * 0.7; });
+    dog.userData.tail.rotation.x = Math.sin(t * 14) * 0.6;
+    dog.userData.ears.forEach(e => { e.rotation.z = Math.sin(t * 7.5) * 0.3 - 0.2; });
+    dog.userData.head.rotation.z = Math.sin(t * 7.5) * 0.06;
+    // the baby watches the pelican go round and claps
+    const toRider = Math.atan2(-(rider.position.z - baby.position.z), rider.position.x - baby.position.x);
+    baby.rotation.y = toRider * 0.25 + Math.sin(t * 0.3) * 0.2;
+    baby.userData.head.rotation.y = toRider - baby.rotation.y;
+    baby.userData.head.rotation.z = Math.sin(t * 2.4) * 0.06;
+    const clap = Math.max(0, Math.sin(t * 7)) * 0.55;
+    baby.userData.arms.forEach(a => { a.rotation.y = -a.userData.s * (0.5 - clap); });
+    catTail.rotation.y = Math.sin(t * 0.8) * 0.4;
+    winCat.userData.head.rotation.y = Math.sin(t * 0.7) * 0.5;
+    const swipe = Math.sin(t * 2.2);
+    yarnCat.userData.paw.rotation.x = Math.max(0, swipe) * 0.9;
+    yarn.position.set(-7.5 + Math.max(0, Math.sin(t * 2.2 - 0.6)) * 0.8, 0.22, -0.6 + Math.sin(t * 1.1) * 0.15);
+    yarn.rotation.z = -t * 3;
+    clockHands[0].rotation.z = -t * 0.02; clockHands[1].rotation.z = -t * 0.24;
+  }
+
   const ENV = {
     day:   { sky: dayTex, fog: 0xE3D3B2, near: 45, far: 170, sun: 0xFFD6A0, sunI: 1.1, hemi: 0.75, hemiSky: 0xDCEBF5, hemiGround: 0x5A6B4A },
     moon:  { sky: blackTex, fog: 0x000000, near: 140, far: 420, sun: 0xFFFFFF, sunI: 1.45, hemi: 0.42, hemiSky: 0xA8B4C8, hemiGround: 0x77746E },
@@ -1772,6 +1915,7 @@
     sky:   { sky: dawnTex, fog: 0xF0C9A8, near: 70, far: 280, sun: 0xFFD2A0, sunI: 1.1, hemi: 0.75, hemiSky: 0xDDE6F5, hemiGround: 0xF0D0B8 },
     ocean: { sky: oceanTex, fog: 0x0F4C70, near: 8, far: 62, sun: 0xBFE8FF, sunI: 0.95, hemi: 0.7, hemiSky: 0x8FD0F0, hemiGround: 0x2A4A5A },
     space: { sky: nebulaTex, fog: 0x05030F, near: 300, far: 1200, sun: 0xFFFFFF, sunI: 1.4, hemi: 0.68, hemiSky: 0xB8B0E6, hemiGround: 0x5A4E78 },
+    home:  { sky: dayTex, fog: 0xF1E6D2, near: 80, far: 260, sun: 0xFFE2B8, sunI: 0.8, hemi: 0.7, hemiSky: 0xFFF4E4, hemiGround: 0xB08A60 },
     night: { sky: nightTex, fog: 0x1E1D33, near: 22, far: 110, sun: 0x9DB2FF, sunI: 0.28, hemi: 0.32, hemiSky: 0x6A6FB0, hemiGround: 0x2A2230 }
   };
   function setEnv(e) {
@@ -2260,13 +2404,14 @@
     oceanG.visible = name === 'ocean'; oceanGear.forEach(o => { o.visible = name === 'ocean'; });
     moonG.visible = name === 'moon'; spaceGear.forEach(o => { o.visible = name === 'moon' || name === 'space'; });
     spaceG.visible = name === 'space';
+    homeG.visible = name === 'home';
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space';
-    setEnv(isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home';
+    setEnv(isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome; });
+    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome; });
+    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -2304,7 +2449,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -2371,15 +2516,15 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home'].includes(location.hash)) applyScene(location.hash.slice(1));
   const btnMusic = document.getElementById('music');
   let audio = null;
   btnMusic.onclick = () => {
