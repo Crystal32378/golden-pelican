@@ -4,6 +4,8 @@
 
 **▶ 線上看：** https://crystal32378.github.io/golden-pelican/
 
+**🎬 97 秒環遊影片：** https://crystal32378.github.io/golden-pelican/golden-pelican-tour.mp4
+
 ## 十個場景
 
 按畫面左下角的「場景」按鈕切換：
