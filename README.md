@@ -37,6 +37,8 @@
 - 建模與程式：Claude（Anthropic）
 - 配樂：Crystal（`score.mp3`）
 
+📐 **[工程設計筆記（Claude 寫的）](DESIGN.md)**：架構、兩段式 IK、萬用羽毛、程式畫的貼圖、錄影流程，以及抓到過的 bug。
+
 整個作品是一個 `index.html`，用 [Three.js r128](https://threejs.org/) 手刻低多邊形模型，沒有任何外部 3D 素材。
 
 ---
