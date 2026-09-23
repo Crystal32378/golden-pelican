@@ -1676,6 +1676,94 @@
     oShafts.forEach(s => { s.m.material.opacity = 0.05 + Math.sin(t * 0.5 + s.ph) * 0.03; });
   }
 
+  // ---------- deep space (宇宙): riding the rings of a gas giant ----------
+  const spaceG = new THREE.Group(); spaceG.visible = false; scene.add(spaceG);
+  let giant = null, ringDust = null, ufo = null, beam = null, station = null, comet = null;
+  const moonsS = [], rocksS = [], cometTail = [];
+  const nebulaTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2048; c.height = 1024; const g = c.getContext('2d');
+    g.fillStyle = '#05030F'; g.fillRect(0, 0, 2048, 1024);
+    const blobs = [[400, 420, 380, '107,63,160'], [620, 520, 260, '192,64,138'], [1500, 380, 420, '47,163,201'], [1320, 560, 300, '43,76,168'], [900, 300, 240, '140,70,190'], [1800, 650, 260, '192,64,138'], [200, 700, 300, '43,76,168'], [1100, 700, 220, '232,120,160']];
+    blobs.forEach(([x, y, r, col]) => { for (let k = 0; k < 3; k++) { const gr = g.createRadialGradient(x + k * 40, y - k * 30, 0, x + k * 40, y - k * 30, r * (1 - k * 0.25)); gr.addColorStop(0, `rgba(${col},0.32)`); gr.addColorStop(0.5, `rgba(${col},0.12)`); gr.addColorStop(1, `rgba(${col},0)`); g.fillStyle = gr; g.fillRect(0, 0, 2048, 1024); } });
+    for (let i = 0; i < 2600; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, w = Math.sin(i * 3.7) * 999; const x = (u - Math.floor(u)) * 2048, y = (v - Math.floor(v)) * 1024, b = w - Math.floor(w); g.fillStyle = `rgba(255,${230 + Math.round(b * 25)},${210 + Math.round(b * 45)},${0.35 + b * 0.65})`; g.fillRect(x, y, b > 0.93 ? 2.5 : 1.2, b > 0.93 ? 2.5 : 1.2); }
+    return new THREE.CanvasTexture(c);
+  })();
+  (function () {
+    // banded gas giant
+    const bc = document.createElement('canvas'); bc.width = 64; bc.height = 256; const bg = bc.getContext('2d');
+    const bands = ['#E8D2A6', '#D9B07A', '#F0E0BE', '#C98E5A', '#E6C890', '#B87A4E', '#EAD6AE', '#D4A36C', '#F2E4C6', '#C8905E'];
+    for (let y = 0; y < 256; y += 8) { bg.fillStyle = bands[(y / 8 + (y % 24 ? 0 : 3)) % bands.length]; bg.fillRect(0, y, 64, 8 + (y % 16)); }
+    bg.fillStyle = 'rgba(190,90,60,0.8)'; bg.beginPath(); bg.ellipse(40, 150, 10, 5, 0, 0, 7); bg.fill();
+    giant = new THREE.Mesh(new THREE.SphereGeometry(3.3, 48, 32), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(bc), roughness: 0.9 }));
+    giant.castShadow = true; giant.receiveShadow = true; spaceG.add(giant);
+    // the ride ring: an icy band with stripes
+    const rc = document.createElement('canvas'); rc.width = 256; rc.height = 4; const rg = rc.getContext('2d');
+    for (let x = 0; x < 256; x++) { const v = 0.55 + 0.25 * Math.sin(x * 0.4) + 0.2 * Math.sin(x * 0.07); rg.fillStyle = `rgba(${200 + v * 40},${190 + v * 40},${170 + v * 50},1)`; rg.fillRect(x, 0, 1, 4); }
+    const ringTex = new THREE.CanvasTexture(rc);
+    const rgeo = new THREE.RingGeometry(4.9, 7.0, 128, 1); const uv = rgeo.attributes.uv, pos = rgeo.attributes.position;
+    for (let i = 0; i < uv.count; i++) { const r = Math.hypot(pos.getX(i), pos.getY(i)); uv.setXY(i, (r - 4.9) / 2.1, 0.5); }
+    const ring = new THREE.Mesh(rgeo, new THREE.MeshStandardMaterial({ map: ringTex, roughness: 0.8, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.receiveShadow = true; spaceG.add(ring);
+    // outer ring of tumbling ice and rock
+    const n = 1600, dust = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xD8D0C4, roughness: 0.7, flatShading: true }), n);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3();
+    for (let i = 0; i < n; i++) {
+      const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, w = Math.sin(i * 39.42) * 9631.7;
+      const a = (u - Math.floor(u)) * Math.PI * 2, r = 7.6 + Math.pow(v - Math.floor(v), 1.3) * 6.5, s0 = 0.03 + (w - Math.floor(w)) * 0.1;
+      e.set(i, i * 2, i * 3); q.setFromEuler(e); sc.setScalar(s0);
+      m4.compose(V(Math.cos(a) * r, ((w * 7) % 1 - 0.5) * 0.3, Math.sin(a) * r), q, sc); dust.setMatrixAt(i, m4);
+      dust.setColorAt(i, new THREE.Color().setHSL(0.08 + (u * 3 % 1) * 0.05, 0.25, 0.6 + (v * 5 % 1) * 0.3));
+    }
+    ringDust = dust; spaceG.add(dust);
+    // two moons
+    [[1.0, 16, 0.15, 0x9A9893, 0.12], [0.7, 21, -0.25, 0xB8664A, -0.08]].forEach(([r, orbit, inc, col, sp]) => { const mo = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 2), M(col)); spaceG.add(mo); moonsS.push({ mo, orbit, inc, sp }); });
+    // tumbling asteroids further out
+    for (let i = 0; i < 26; i++) { const a = i * 2.39996, r = 22 + (i % 7) * 4, sz = 0.4 + (i % 5) * 0.35; const ro = facet(spaceG, M(i % 3 ? 0x6F6A66 : 0x8A7A6A), V(Math.cos(a) * r, ((i * 37) % 17) - 8, Math.sin(a) * r), [sz * 1.3, sz, sz * 1.1], [i, i, 0], 0); rocksS.push({ ro, ph: i }); }
+    // the Sun
+    const SUNS = V(-22, 15, 13).normalize();
+    const sd = new THREE.Mesh(new THREE.CircleGeometry(6, 32), new THREE.MeshBasicMaterial({ color: 0xFFFBEA, fog: false })); sd.position.copy(SUNS).multiplyScalar(330); sd.lookAt(0, 0, 0); spaceG.add(sd);
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), new THREE.MeshBasicMaterial({ map: radialTex([[0, 'rgba(255,250,230,0.9)'], [0.2, 'rgba(255,220,180,0.3)'], [1, 'rgba(255,200,160,0)']]), transparent: true, depthWrite: false, fog: false })); sh.position.copy(SUNS).multiplyScalar(335); sh.lookAt(0, 0, 0); spaceG.add(sh);
+    // a distant blue marble
+    const eb = new THREE.Mesh(new THREE.SphereGeometry(1.4, 24, 16), new THREE.MeshStandardMaterial({ color: 0x3F7FC8, emissive: 0x0A1A30, roughness: 0.6 })); eb.position.set(40, 14, 70); spaceG.add(eb);
+    // space station: hub, spinning habitat ring, solar wings
+    station = new THREE.Group(); station.position.set(26, 9, -30); station.rotation.set(0.4, 0.6, 0.2); spaceG.add(station);
+    const alu = M(0xD8DCE0, { metalness: 0.5, roughness: 0.4 });
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 5, 12), alu); hub.rotation.z = Math.PI / 2; station.add(hub);
+    const hab = new THREE.Group(); station.add(hab); station.userData.hab = hab;
+    const tor = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.35, 8, 32), alu); tor.rotation.y = Math.PI / 2; hab.add(tor);
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; rod(hab, V(0, 0, 0), V(0, Math.cos(a) * 3.2, Math.sin(a) * 3.2), 0.1, alu); }
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, w = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.28), new THREE.MeshBasicMaterial({ color: 0xFFE9A8 })); w.position.set(0.36, Math.cos(a) * 3.2, Math.sin(a) * 3.2); hab.add(w); }
+    const pc = document.createElement('canvas'); pc.width = 64; pc.height = 32; const pg = pc.getContext('2d'); pg.fillStyle = '#1C3A78'; pg.fillRect(0, 0, 64, 32); pg.strokeStyle = '#6F9AE0'; pg.lineWidth = 1; for (let x = 0; x <= 64; x += 8) { pg.beginPath(); pg.moveTo(x, 0); pg.lineTo(x, 32); pg.stroke(); } for (let y = 0; y <= 32; y += 8) { pg.beginPath(); pg.moveTo(0, y); pg.lineTo(64, y); pg.stroke(); }
+    const panelM = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(pc), metalness: 0.5, roughness: 0.3, side: THREE.DoubleSide });
+    [-1, 1].forEach(sd2 => { rod(station, V(sd2 * 2.5, 0, 0), V(sd2 * 3.4, 0, 0), 0.06, alu); [-1, 1].forEach(sz => { const pnl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 4), panelM); pnl.position.set(sd2 * 3.4, 0, sz * 2.3); pnl.rotation.x = -Math.PI / 2; station.add(pnl); }); });
+    // comet
+    comet = new THREE.Group(); spaceG.add(comet);
+    const ch = new THREE.Mesh(new THREE.SphereGeometry(0.6, 12, 8), new THREE.MeshBasicMaterial({ color: 0xE6FAFF })); comet.add(ch);
+    const cm = new THREE.MeshBasicMaterial({ color: 0x9FE3FF, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+    for (let k = 0; k < 40; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), cm); spaceG.add(d); cometTail.push(d); }
+    // a flying saucer
+    ufo = new THREE.Group(); spaceG.add(ufo);
+    const hull = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12), M(0xB8BEC4, { metalness: 0.7, roughness: 0.25 })); hull.scale.set(1.3, 0.28, 1.3); ufo.add(hull);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x9FE8C8, transparent: true, opacity: 0.55, emissive: 0x2A8A6A, emissiveIntensity: 0.5 })); dome.position.y = 0.18; ufo.add(dome);
+    ufo.userData.lights = [];
+    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2, l = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), new THREE.MeshBasicMaterial({ color: 0xFFE14A })); l.position.set(Math.cos(a) * 1.2, -0.03, Math.sin(a) * 1.2); ufo.add(l); ufo.userData.lights.push(l); }
+    beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 1.4, 5, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x9FFFD0, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })); beam.position.y = -2.6; ufo.add(beam);
+  })();
+  function updateSpace(t) {
+    giant.rotation.y = t * 0.05;
+    ringDust.rotation.y = -t * 0.02;
+    moonsS.forEach(m => { const a = t * m.sp; m.mo.position.set(Math.cos(a) * m.orbit, Math.sin(a) * m.orbit * m.inc, Math.sin(a) * m.orbit); m.mo.rotation.y = t * 0.1; });
+    rocksS.forEach(r => { r.ro.rotation.x = t * 0.2 + r.ph; r.ro.rotation.y = t * 0.13 + r.ph; });
+    station.userData.hab.rotation.x = t * 0.25;
+    const CT = 26, cu = (t % CT) / CT, A = V(-140, 60, -120), B = V(140, 20, -150);
+    comet.position.copy(A).lerp(B, cu); const cd = new THREE.Vector3().subVectors(B, A).normalize();
+    cometTail.forEach((d, k) => { d.position.copy(comet.position).addScaledVector(cd, -(k * 1.1 + 0.8)).add(V(0, k * 0.08, 0)); d.scale.setScalar(Math.max(0.05, 1.3 - k * 0.03)); });
+    const ua = t * 0.35;
+    ufo.position.set(Math.sin(ua) * 11, 6.5 + Math.sin(t * 0.9) * 0.6, Math.sin(ua * 2) * 6);
+    ufo.rotation.y = t * 1.5; ufo.rotation.z = Math.cos(ua) * 0.15;
+    ufo.userData.lights.forEach((l, k) => { l.material.color.setHSL(((k / 10) + t * 0.3) % 1, 0.9, 0.62); });
+    const bOn = Math.sin(t * 0.45) > 0.55; beam.visible = bOn; if (bOn) beam.material.opacity = 0.12 + Math.sin(t * 8) * 0.05;
+  }
+
   const ENV = {
     day:   { sky: dayTex, fog: 0xE3D3B2, near: 45, far: 170, sun: 0xFFD6A0, sunI: 1.1, hemi: 0.75, hemiSky: 0xDCEBF5, hemiGround: 0x5A6B4A },
     moon:  { sky: blackTex, fog: 0x000000, near: 140, far: 420, sun: 0xFFFFFF, sunI: 1.45, hemi: 0.42, hemiSky: 0xA8B4C8, hemiGround: 0x77746E },
@@ -1683,6 +1771,7 @@
     jungle: { sky: jungleTex, fog: 0xA9C29A, near: 14, far: 80, sun: 0xFFF2C8, sunI: 1.05, hemi: 0.7, hemiSky: 0xEAF4E0, hemiGround: 0x6E6A52 },
     sky:   { sky: dawnTex, fog: 0xF0C9A8, near: 70, far: 280, sun: 0xFFD2A0, sunI: 1.1, hemi: 0.75, hemiSky: 0xDDE6F5, hemiGround: 0xF0D0B8 },
     ocean: { sky: oceanTex, fog: 0x0F4C70, near: 8, far: 62, sun: 0xBFE8FF, sunI: 0.95, hemi: 0.7, hemiSky: 0x8FD0F0, hemiGround: 0x2A4A5A },
+    space: { sky: nebulaTex, fog: 0x05030F, near: 300, far: 1200, sun: 0xFFFFFF, sunI: 1.4, hemi: 0.68, hemiSky: 0xB8B0E6, hemiGround: 0x5A4E78 },
     night: { sky: nightTex, fog: 0x1E1D33, near: 22, far: 110, sun: 0x9DB2FF, sunI: 0.28, hemi: 0.32, hemiSky: 0x6A6FB0, hemiGround: 0x2A2230 }
   };
   function setEnv(e) {
@@ -2169,14 +2258,15 @@
     skyG.visible = name === 'sky'; skyGear.forEach(o => { o.visible = name === 'sky'; });
     parisG.visible = name === 'paris'; parisGear.forEach(o => { o.visible = name === 'paris'; });
     oceanG.visible = name === 'ocean'; oceanGear.forEach(o => { o.visible = name === 'ocean'; });
-    moonG.visible = name === 'moon'; spaceGear.forEach(o => { o.visible = name === 'moon'; });
+    moonG.visible = name === 'moon'; spaceGear.forEach(o => { o.visible = name === 'moon' || name === 'space'; });
+    spaceG.visible = name === 'space';
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean';
-    setEnv(isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space';
+    setEnv(isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace; });
+    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace; });
+    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -2186,7 +2276,7 @@
     const dist = t * SPEED;
     const th = dist / R_PATH;
     const ph = -th;
-    const hop = sceneName === 'moon' ? 0.32 * Math.pow(Math.abs(Math.sin(dist * 0.55)), 1.6) : sceneName === 'ocean' ? 0.1 * Math.abs(Math.sin(dist * 0.4)) : 0; // low gravity: slow floaty bounces
+    const hop = (sceneName === 'moon' || sceneName === 'space') ? 0.32 * Math.pow(Math.abs(Math.sin(dist * 0.55)), 1.6) : sceneName === 'ocean' ? 0.1 * Math.abs(Math.sin(dist * 0.4)) : 0; // low gravity: slow floaty bounces
     rider.position.set(Math.cos(ph) * R_PATH, 0.04 + hop, Math.sin(ph) * R_PATH);
     rider.rotation.y = Math.PI / 2 - ph;
     lean.rotation.x = -0.07;
@@ -2214,7 +2304,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -2281,15 +2371,15 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space'].includes(location.hash)) applyScene(location.hash.slice(1));
   const btnMusic = document.getElementById('music');
   let audio = null;
   btnMusic.onclick = () => {
