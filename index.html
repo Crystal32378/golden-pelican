@@ -2539,6 +2539,151 @@
     aunties.forEach(a => { a.au.userData.head.rotation.y = Math.sin(t * 0.6 + a.ph) * 0.35; a.au.position.y = Math.abs(Math.sin(t * 1.1 + a.ph)) * 0.015; });
   }
 
+  // ---------- the night library (書海) — scene brief by Kimi (Moonshot AI) ----------
+  const libG = new THREE.Group(); libG.visible = false; scene.add(libG);
+  const libLamps = [], libBooks = [], libSentences = [];
+  let libMoonText = null;
+  const libTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#0B0F1E'); gr.addColorStop(0.5, '#15121A'); gr.addColorStop(1, '#1A1410');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  (function () {
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(120, 48), M(0x3A2A20)); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.01; floor.receiveShadow = true; libG.add(floor);
+    const runner = new THREE.Mesh(new THREE.RingGeometry(5.0, 7.0, 120, 1), M(0x6E2A2A, { roughness: 1 })); runner.rotation.x = -Math.PI / 2; runner.position.y = 0.01; runner.receiveShadow = true; libG.add(runner);
+    [5.15, 6.85].forEach(r => { const b = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.05, 120, 1), M(0xC9A04A, { metalness: 0.4 })); b.rotation.x = -Math.PI / 2; b.position.y = 0.015; libG.add(b); });
+    // bookshelves: rows of tall units on both sides of the ride, and further rings fading into the dark
+    const wood = M(0x4A3326), wood2 = M(0x3A281E);
+    const spineCols = [0x8C2F39, 0x2F5F4A, 0x2F4A6E, 0xB5563E, 0xD9A456, 0x5B3A29, 0xE6D8B8].map(c => new THREE.Color(c));
+    const mats = []; const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+    const unitM = new THREE.Matrix4();
+    let seed = 1; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    function unit(a, r, facingIn, H, W) {
+      const u = new THREE.Group(); u.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); u.rotation.y = facingIn ? Math.atan2(-u.position.x, -u.position.z) : Math.atan2(u.position.x, u.position.z); libG.add(u);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.08), wood2); back.position.set(0, H / 2, -0.3); u.add(back);
+      [-W / 2, W / 2].forEach(x => { const sd = new THREE.Mesh(new THREE.BoxGeometry(0.1, H, 0.7), wood); sd.position.set(x, H / 2, 0); sd.castShadow = true; u.add(sd); });
+      const top = new THREE.Mesh(new THREE.BoxGeometry(W + 0.2, 0.18, 0.8), wood); top.position.y = H + 0.09; u.add(top);
+      u.updateMatrixWorld(true); unitM.copy(u.matrixWorld);
+      for (let y = 0.1; y < H - 0.6; y += 0.9) {
+        const sh = new THREE.Mesh(new THREE.BoxGeometry(W, 0.06, 0.62), wood); sh.position.set(0, y, 0); u.add(sh);
+        let x = -W / 2 + 0.08;
+        while (x < W / 2 - 0.2) {
+          const w = 0.07 + rnd() * 0.09, h = 0.5 + rnd() * 0.28, lean = rnd() < 0.06 ? 0.25 : 0;
+          e.set(0, 0, lean); q.setFromEuler(e);
+          m4.compose(V(x + w / 2, y + 0.03 + h / 2, 0.02), q, V(w, h, 0.45)); m4.premultiply(unitM);
+          mats.push([m4.clone(), spineCols[Math.floor(rnd() * spineCols.length)]]);
+          x += w + 0.012; if (rnd() < 0.04) x += 0.25;
+        }
+      }
+      return u;
+    }
+    const outerN = 22, innerN = 10;
+    for (let i = 0; i < outerN; i++) unit(i / outerN * Math.PI * 2, 8.3, true, 7.5 + ((i * 7) % 4) * 0.9, 2.2);
+    for (let i = 0; i < innerN; i++) unit(i / innerN * Math.PI * 2 + 0.2, 3.7, false, 5.2 + (i % 3) * 0.6, 2.0);
+    for (let i = 0; i < 30; i++) unit(i / 30 * Math.PI * 2 + 0.1, 12.5, true, 9.5 + (i % 3), 2.4);
+    for (let i = 0; i < 38; i++) unit(i / 38 * Math.PI * 2 + 0.05, 16.5, true, 11 + (i % 4), 2.6);
+    const booksIM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ roughness: 0.8, flatShading: true }), mats.length);
+    mats.forEach(([mm, col], i) => { booksIM.setMatrixAt(i, mm); booksIM.setColorAt(i, col); });
+    booksIM.instanceMatrix.needsUpdate = true; if (booksIM.instanceColor) booksIM.instanceColor.needsUpdate = true;
+    booksIM.castShadow = true; libG.add(booksIM);
+    // rolling ladders
+    [0.7, 2.9, 4.6].forEach(a => { const g = new THREE.Group(); g.position.set(Math.cos(a) * 7.6, 0, Math.sin(a) * 7.6); g.rotation.y = Math.atan2(-g.position.x, -g.position.z); libG.add(g); [-0.3, 0.3].forEach(x => rod(g, V(x, 0, 0.1), V(x, 6.4, -0.55), 0.04, M(0x8A6240))); for (let k = 1; k < 13; k++) { const y = k * 0.48; rod(g, V(-0.3, y, 0.1 - y * 0.1), V(0.3, y, 0.1 - y * 0.1), 0.025, M(0x8A6240)); } rod(g, V(-0.35, 6.4, -0.55), V(0.35, 6.4, -0.55), 0.03, M(0xC9A04A)); });
+    // reading table in the middle: green banker's lamp, a globe, a stack of books
+    const tbl = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.1, 24), M(0x5B3A29)); tbl.position.y = 1.0; tbl.castShadow = true; libG.add(tbl);
+    const leg = cyl(0.12, M(0x3A281E), 8); leg.scale.y = 1.0; leg.position.y = 0.5; libG.add(leg);
+    const lampB = new THREE.Group(); lampB.position.set(0.5, 1.05, 0.2); libG.add(lampB);
+    rod(lampB, V(0, 0, 0), V(0, 0.55, 0), 0.03, M(0xC9A04A, { metalness: 0.6 }));
+    const lsh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.24, 0.16, 12, 1, true, 0, Math.PI), new THREE.MeshStandardMaterial({ color: 0x2F7A4A, emissive: 0x1A4A2A, side: THREE.DoubleSide })); lsh.rotation.z = Math.PI / 2; lsh.rotation.y = Math.PI / 2; lsh.position.set(0, 0.58, 0.05); lampB.add(lsh);
+    const lampL = new THREE.PointLight(0xFFD29A, 1.4, 9, 2); lampL.position.set(0.5, 1.5, 0.2); libG.add(lampL);
+    const gc = document.createElement('canvas'); gc.width = 128; gc.height = 64; const gg = gc.getContext('2d'); gg.fillStyle = '#C9B98C'; gg.fillRect(0, 0, 128, 64); gg.fillStyle = '#7A8A5A'; [[30, 22, 16, 12], [70, 30, 20, 14], [100, 20, 12, 10], [45, 44, 10, 8]].forEach(([x, y, rx, ry]) => { gg.beginPath(); gg.ellipse(x, y, rx, ry, 0, 0, 7); gg.fill(); });
+    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.3, 18, 12), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(gc), roughness: 0.6 })); globe.position.set(-0.5, 1.5, -0.3); globe.rotation.z = 0.4; libG.add(globe); libG.userData.globe = globe;
+    const gr = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.015, 4, 24, Math.PI * 1.4), M(0xC9A04A, { metalness: 0.6 })); gr.position.copy(globe.position); gr.rotation.set(0, Math.PI / 2, 0.4); libG.add(gr);
+    rod(libG, V(-0.5, 1.05, -0.3), V(-0.5, 1.2, -0.3), 0.06, M(0x3A281E));
+    for (let k = 0; k < 5; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.5 - k * 0.03, 0.08, 0.36), M([0x8C2F39, 0x2F4A6E, 0xD9A456, 0x2F5F4A, 0xB5563E][k])); b.position.set(0.1, 1.1 + k * 0.08, -0.6); b.rotation.y = k * 0.2; libG.add(b); }
+    // the moon, high up, shining through
+    const moonD = new THREE.Mesh(new THREE.CircleGeometry(10, 40), new THREE.MeshBasicMaterial({ color: 0xE8EEF8, fog: false })); moonD.position.copy(V(0.3, 0.75, -0.6).normalize().multiplyScalar(300)); moonD.lookAt(0, 0, 0); libG.add(moonD);
+    // twelve lamps on the far shelves: one lights up for every lap
+    const haloTex = radialTex([[0, 'rgba(255,220,150,0.95)'], [0.25, 'rgba(255,200,120,0.4)'], [1, 'rgba(255,190,110,0)']]);
+    for (let k = 0; k < 12; k++) {
+      const a = -k / 12 * Math.PI * 2 - 0.35, p = V(Math.cos(a) * 7.75, 5.6, Math.sin(a) * 7.75);
+      rod(libG, p.clone().add(V(0, 2.2, 0)), p.clone().add(V(0, 0.15, 0)), 0.01, M(0x1C1D20));
+      const shade = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.16, 10, 1, true), M(0x2B2D33, { side: THREE.DoubleSide })); shade.position.copy(p).add(V(0, 0.1, 0)); libG.add(shade);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshStandardMaterial({ color: 0x3A3024, emissive: 0xFFC870, emissiveIntensity: 0 })); bulb.position.copy(p); libG.add(bulb);
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); halo.position.copy(p); halo.scale.setScalar(2.2); libG.add(halo);
+      libLamps.push({ bulb, halo });
+    }
+    // open books on the floor whose pages lift as the pelican rides past
+    const pageM = new THREE.MeshStandardMaterial({ color: 0xF2E8D2, side: THREE.DoubleSide, roughness: 1, flatShading: true });
+    [[0.4, 5.35], [1.3, 6.75], [2.2, 5.3], [3.1, 6.7], [4.0, 5.35], [4.9, 6.7], [5.7, 5.4]].forEach(([a, r], i) => {
+      const bk = new THREE.Group(); bk.position.set(Math.cos(a) * r, 0.03, Math.sin(a) * r); bk.rotation.y = Math.atan2(-bk.position.x, -bk.position.z) + 0.3; libG.add(bk);
+      [-1, 1].forEach(sd => { const cv = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.03, 0.75), M([0x8C2F39, 0x2F4A6E, 0x2F5F4A][i % 3])); cv.position.set(sd * 0.28, 0, 0); bk.add(cv); const blk = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.7), pageM); blk.position.set(sd * 0.26, 0.04, 0); bk.add(blk); });
+      const pages = [];
+      for (let k = 0; k < 4; k++) { const pv = new THREE.Group(); pv.position.y = 0.07 + k * 0.004; bk.add(pv); const pg = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7, 6, 1), pageM); pg.rotation.x = -Math.PI / 2; pg.position.x = 0.25; pv.add(pg); pages.push(pv); }
+      libBooks.push({ bk, a, pages, ph: i });
+      if (i === 3) libBooks[i].moon = true;
+    });
+    // glowing sentences: text sampled from a canvas into points that drift up out of the shelves and scatter
+    function textPoints(text, font, stepPx, scale) {
+      const c = document.createElement('canvas'); c.width = 900; c.height = 90; const g = c.getContext('2d');
+      g.fillStyle = '#FFF'; g.font = font; g.textBaseline = 'middle'; g.fillText(text, 10, 45);
+      const d = g.getImageData(0, 0, 900, 90).data, pts = []; let maxX = 0;
+      for (let y = 0; y < 90; y += stepPx) for (let x = 0; x < 900; x += stepPx) if (d[(y * 900 + x) * 4 + 3] > 128) { pts.push(x, y); maxX = Math.max(maxX, x); }
+      const n = pts.length / 2, pos = new Float32Array(n * 3), base = new Float32Array(n * 3), jit = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { base[i * 3] = (pts[i * 2] - maxX / 2) * scale; base[i * 3 + 1] = -(pts[i * 2 + 1] - 45) * scale; base[i * 3 + 2] = 0; const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, w = Math.sin(i * 39.42) * 9631.7; jit.set([(u - Math.floor(u)) - 0.5, (v - Math.floor(v)) - 0.3, (w - Math.floor(w)) - 0.5], i * 3); }
+      pos.set(base); const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const pts3 = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xFFD9A0, size: 0.03, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      pts3.userData = { base, jit }; pts3.frustumCulled = false; return pts3;
+    }
+    const zh = '700 56px "PingFang TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",serif';
+    [['每繞一圈，就有一盞燈為你亮起', zh], ['書海無涯，單車作舟', zh], ['給每一個深夜還在讀的人', zh], ['every lap, a lamp', 'italic 700 60px Georgia, "Times New Roman", serif']].forEach(([txt, font], i) => {
+      const p = textPoints(txt, font, 3, 0.006); libG.add(p);
+      libSentences.push({ p, a: i * 1.57 + 0.8, r: i % 2 ? 6.9 : 5.1, ph: i * 3.1 });
+    });
+    // easter egg for the pelican that came from the Moon: M◯◯N floating over one of the books
+    const mc = document.createElement('canvas'); mc.width = 300; mc.height = 90; const mg = mc.getContext('2d'); mg.fillStyle = '#FFF'; mg.font = '700 64px Georgia, serif'; mg.textBaseline = 'middle'; mg.fillText('M', 10, 48); mg.fillText('N', 230, 48); [[120, 48], [182, 48]].forEach(([x, y]) => { mg.beginPath(); mg.arc(x, y, 24, 0, 7); mg.fill(); });
+    const md = mg.getImageData(0, 0, 300, 90).data, mp = [];
+    for (let y = 0; y < 90; y += 3) for (let x = 0; x < 300; x += 3) if (md[(y * 300 + x) * 4 + 3] > 128) mp.push((x - 150) * 0.004, -(y - 45) * 0.004, 0);
+    const mgeo = new THREE.BufferGeometry(); mgeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mp), 3));
+    libMoonText = new THREE.Points(mgeo, new THREE.PointsMaterial({ color: 0xDDE8FF, size: 0.035, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const mb = libBooks[3].bk; libMoonText.position.copy(mb.position).add(V(0, 0.55, 0)); libMoonText.rotation.y = mb.rotation.y; libG.add(libMoonText);
+  })();
+  // a scarf for the library
+  const libGear = [], libTails = [];
+  (function () {
+    const wool = M(0x2F5F4A, { roughness: 1 });
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.05, 6, 16), wool); collar.position.set(0.04, 1.8, 0); collar.rotation.set(Math.PI / 2, 0.3, 0); headGrp.add(collar); libGear.push(collar);
+    [0.05, -0.05].forEach((z, i) => { const pv = new THREE.Group(); pv.position.set(-0.08, 1.78, z); headGrp.add(pv); feather(pv, wool, V(0, 0, 0), V(-1, -0.4, 0), V(0, 0, 1), 0.55 - i * 0.1, 0.15); libGear.push(pv); libTails.push(pv); });
+    libGear.forEach(o => { o.visible = false; });
+  })();
+  function updateLibrary(t) {
+    const laps = t * SPEED / (Math.PI * 2 * R_PATH), done = Math.floor(laps), frac = laps - done, lit = done % 13;
+    libLamps.forEach((l, k) => {
+      const on = k < lit ? 1 : 0, fresh = k === lit - 1 ? Math.min(1, frac * 5) : 1, v = on * fresh;
+      l.bulb.material.emissiveIntensity = v * 1.6; l.halo.material.opacity = v * (0.85 + Math.sin(t * 2 + k) * 0.08);
+    });
+    const ra = Math.atan2(rider.position.z, rider.position.x);
+    libBooks.forEach(b => {
+      let d = ra - b.a; d = Math.atan2(Math.sin(d), Math.cos(d));
+      const near = Math.max(0, 1 - Math.abs(d) / 0.55);
+      b.pages.forEach((pv, k) => { pv.rotation.z = near * (0.25 + 0.9 * Math.abs(Math.sin(t * 6 + k * 0.9 + b.ph))) + Math.sin(t * 0.8 + k + b.ph) * 0.03; });
+    });
+    libSentences.forEach(sn => {
+      const P = 12, u = ((t + sn.ph) % P) / P, pa = sn.p.geometry.attributes.position, { base, jit } = sn.p.userData;
+      const scatter = Math.max(0, (u - 0.62) / 0.38);
+      for (let i = 0; i < pa.count; i++) pa.setXYZ(i, base[i * 3] + jit[i * 3] * scatter * 3, base[i * 3 + 1] + jit[i * 3 + 1] * scatter * 2.5 + Math.sin(t * 2 + i * 0.05) * 0.01, jit[i * 3 + 2] * scatter * 3);
+      pa.needsUpdate = true;
+      const a = sn.a + Math.floor((t + sn.ph) / P) * 1.1;
+      sn.p.position.set(Math.cos(a) * sn.r, 3.4 + u * 5.0, Math.sin(a) * sn.r);
+      sn.p.lookAt(camera.position);
+      sn.p.material.opacity = Math.min(1, u * 6) * (1 - scatter) * 0.95;
+    });
+    libMoonText.position.y = libBooks[3].bk.position.y + 0.55 + Math.sin(t * 1.2) * 0.06;
+    libMoonText.lookAt(camera.position.x, libMoonText.position.y, camera.position.z);
+    libG.userData.globe.rotation.y = t * 0.2;
+    libTails.forEach((pv, i) => { pv.rotation.y = Math.sin(t * 4 + i) * 0.2; pv.rotation.z = 0.2 + Math.sin(t * 3.5 + i * 2) * 0.1; });
+  }
+
+  ENV.library = { sky: libTex, fog: 0x14100C, near: 10, far: 48, sun: 0x9FB4E0, sunI: 0.55, hemi: 0.35, hemiSky: 0x6A6A90, hemiGround: 0x3A2A1E };
   ENV.wet = { sky: morningTex, fog: 0xDCE6EC, near: 30, far: 120, sun: 0xFFF0D8, sunI: 1.0, hemi: 0.8, hemiSky: 0xE6F0FA, hemiGround: 0x9A9080 };
   let sceneName = 'island';
   const islandOnly = [island, sea, glint];
@@ -2557,14 +2702,15 @@
     moonG.visible = name === 'moon'; spaceGear.forEach(o => { o.visible = name === 'moon' || name === 'space'; });
     spaceG.visible = name === 'space';
     homeG.visible = name === 'home';
+    libG.visible = name === 'library'; libGear.forEach(o => { o.visible = name === 'library'; });
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket';
-    setEnv(isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library';
+    setEnv(isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib; });
+    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib; });
+    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -2602,7 +2748,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -2620,7 +2766,7 @@
     const psi = 2.1 + t * 0.22;       // around rider
     const dist = 4.6 + Math.sin(t * 0.3) * 0.8;
     const h = 1.6 + Math.sin(t * 0.21 + 1) * 0.7;
-    if (sceneName === 'market' || sceneName === 'wetmarket') {
+    if (sceneName === 'market' || sceneName === 'wetmarket' || sceneName === 'library') {
       // stay inside the lane: mostly ahead/behind the rider, never behind the stalls
       // camera slides along the aisle itself: a fixed arc ahead of or behind the rider, never behind the stalls
       const cx = Math.cos(psi), ax = Math.sign(cx || 1) * Math.max(Math.abs(cx), 0.7);
@@ -2669,15 +2815,17 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library'].includes(location.hash)) applyScene(location.hash.slice(1));
+  // editing the #hash by hand now switches scenes too (bug spotted by Kimi)
+  addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SCENE_LABEL[h] && h !== sceneName) applyScene(h); });
   const btnMusic = document.getElementById('music');
   let audio = null;
   btnMusic.onclick = () => {
