@@ -2931,6 +2931,133 @@
   }
 
   ENV.vinyl = { sky: dreamTex, fog: 0x3A2448, near: 35, far: 140, sun: 0xFFE0F0, sunI: 0.95, hemi: 0.6, hemiSky: 0xC9A8FF, hemiGround: 0x4A2A3A };
+  // ---------- the snow globe (雪花球): a winter village under glass, on a desk, shaken every so often ----------
+  const globeG = new THREE.Group(); globeG.visible = false; scene.add(globeG);
+  const gState = { SHAKE: 24, GR: 9.8, GCY: 2.5 };
+  const roomTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#1E1814'); gr.addColorStop(0.5, '#3A2A20'); gr.addColorStop(1, '#2A1E16');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  LAZY.push(['globe', function () {
+    const { GR, GCY } = gState;
+    const inner = new THREE.Group(); globeG.add(inner); gState.inner = inner;   // everything that wobbles with the globe
+    // snowy ground inside, with a trodden ring where the pelican rides
+    const gg = new THREE.CircleGeometry(Math.sqrt(GR * GR - GCY * GCY) - 0.05, 64, 0, Math.PI * 2); const gp = gg.attributes.position;
+    for (let i = 0; i < gp.count; i++) { const x = gp.getX(i), y = gp.getY(i), r = Math.hypot(x, y); const off = (r < 5 || r > 7.1) ? 0.12 * Math.sin(x * 1.3) * Math.cos(y * 1.1) + 0.1 : 0; gp.setZ(i, off); }
+    gg.computeVertexNormals();
+    const ground = new THREE.Mesh(gg, M(0xF4F8FB, { roughness: 0.95 })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; inner.add(ground);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(5.3, 6.7, 96, 1), M(0xD9E4EE)); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.012; ring.receiveShadow = true; inner.add(ring);
+    // village: cottages with lit windows, snowy pines, a snowman, a lamppost
+    const warm = new THREE.MeshBasicMaterial({ color: 0xFFC878 });
+    [[0.9, 8.1, 0xB8563E], [2.6, 8.0, 0x5E7A8C], [4.2, 8.1, 0xD9A456], [5.4, 3.3, 0x8C4A5A]].forEach(([a, r, col], k) => {
+      const h = new THREE.Group(); h.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); h.rotation.y = Math.atan2(-h.position.x, -h.position.z); inner.add(h);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.3, 1.4), M(col)); body.position.y = 0.65; body.castShadow = true; h.add(body);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.35, 0.9, 4), M(0xF4F8FB)); roof.rotation.y = Math.PI / 4; roof.position.y = 1.75; roof.scale.set(1.1, 1, 0.95); h.add(roof);
+      const ch = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.6, 0.25), M(0x6E4A3A)); ch.position.set(0.45, 2.0, 0.2); h.add(ch);
+      [[-0.4, 0.75], [0.4, 0.75]].forEach(([x, y]) => { const w = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), warm); w.position.set(x, y, 0.71); h.add(w); });
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.6), M(0x5B3A29)); d.position.set(0, 0.3, 0.71); h.add(d);
+    });
+    function pine(x, z, s) { const t = new THREE.Group(); t.position.set(x, 0, z); inner.add(t); rod(t, V(0, 0, 0), V(0, 0.5 * s, 0), 0.08 * s, M(0x5A4636)); [[1.0, 0.5], [0.78, 1.05], [0.55, 1.55]].forEach(([r, y]) => { const c = new THREE.Mesh(new THREE.ConeGeometry(r * s, 0.9 * s, 7), M(0x2F5A3A)); c.position.y = y * s; c.castShadow = true; t.add(c); const sn = new THREE.Mesh(new THREE.ConeGeometry(r * s * 0.7, 0.3 * s, 7), M(0xF4F8FB)); sn.position.y = y * s + 0.32 * s; t.add(sn); }); }
+    [[1.6, 7.9, 1.2], [3.4, 8.2, 1.4], [5.0, 8.0, 1.1], [0.2, 8.3, 1.3], [2.0, 3.4, 1.0], [3.8, 3.6, 1.1], [4.9, 2.4, 0.9], [6.0, 7.8, 1.2]].forEach(([a, r, sc]) => pine(Math.cos(a) * r, Math.sin(a) * r, sc));
+    // centre: a tall pine wearing a star, and a snowman beside it
+    pine(0, 0, 2.2);
+    const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.3, 0), new THREE.MeshBasicMaterial({ color: 0xFFE070 })); star.position.y = 4.4; inner.add(star); gState.star = star;
+    const sm = new THREE.Group(); sm.position.set(2.2, 0, 1.4); sm.rotation.y = -0.6; inner.add(sm);
+    [[0, 0.45, 0.5], [0, 1.2, 0.36], [0, 1.75, 0.26]].forEach(([x, y, r]) => facet(sm, M(0xF7FAFC), V(x, y, 0), [r, r, r], null, 1));
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 6), M(0xE58C3A)); nose.rotation.x = Math.PI / 2; nose.position.set(0, 1.75, 0.35); sm.add(nose);
+    [-1, 1].forEach(sd => { facet(sm, M(0x1C1D20), V(sd * 0.09, 1.83, 0.22), [0.035, 0.035, 0.03], null, 0); rod(sm, V(sd * 0.3, 1.25, 0), V(sd * 0.85, 1.6, 0), 0.03, M(0x5A4636)); });
+    const shat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.3, 12), M(0x1C1D20)); shat.position.y = 2.08; sm.add(shat); const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 14), M(0x1C1D20)); brim.position.y = 1.94; sm.add(brim);
+    const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.07, 6, 14), M(0xC8321E)); scarf.rotation.x = Math.PI / 2; scarf.position.y = 1.52; sm.add(scarf);
+    const lpst = cyl(0.05, M(0x2B2D33), 8); lpst.scale.y = 3; lpst.position.set(Math.cos(3.1) * 7.3, 1.5, Math.sin(3.1) * 7.3); inner.add(lpst);
+    const lbulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), warm); lbulb.position.set(Math.cos(3.1) * 7.3, 3.1, Math.sin(3.1) * 7.3); inner.add(lbulb);
+    const vl = new THREE.PointLight(0xFFC878, 0.9, 10, 2); vl.position.copy(lbulb.position); inner.add(vl);
+    // the glass: faint, with a bright curved highlight so it reads as a sphere
+    const glass = new THREE.Mesh(new THREE.SphereGeometry(GR, 48, 32, 0, Math.PI * 2, 0, Math.acos(-GCY / GR)), new THREE.MeshStandardMaterial({ color: 0xDDEBF5, transparent: true, opacity: 0.1, roughness: 0.05, metalness: 0.3, side: THREE.DoubleSide, depthWrite: false }));
+    glass.position.y = GCY; inner.add(glass);
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(GR * 1.002, 32, 16, -0.9, 0.35, 0.35, 0.9), new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide })); hl.position.y = GCY; inner.add(hl);
+    const hl2 = new THREE.Mesh(new THREE.SphereGeometry(GR * 1.002, 16, 8, 2.3, 0.12, 0.6, 0.5), new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide })); hl2.position.y = GCY; inner.add(hl2);
+    // turned wooden base with a brass band and a little plaque
+    const wood = M(0x6E4A30, { roughness: 0.45 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(9.7, 10.8, 2.4, 48), wood); base.position.y = -1.2; base.castShadow = base.receiveShadow = true; inner.add(base);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(9.75, 9.75, 0.25, 48, 1, true), M(0xC9A04A, { metalness: 0.7, roughness: 0.3 })); band.position.y = -0.2; inner.add(band);
+    const pc = document.createElement('canvas'); pc.width = 256; pc.height = 64; const pg = pc.getContext('2d'); pg.fillStyle = '#C9A04A'; pg.fillRect(0, 0, 256, 64); pg.strokeStyle = '#8A6A2A'; pg.lineWidth = 4; pg.strokeRect(4, 4, 248, 56); pg.fillStyle = '#3A2A10'; pg.textAlign = 'center'; pg.font = '700 26px "PingFang TC","Noto Sans CJK TC",serif'; pg.fillText('黃金鵜鶘 · 2026', 128, 42);
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(pc), metalness: 0.5, roughness: 0.4 })); plaque.position.set(0, -1.2, 10.3); plaque.rotation.x = -0.24; inner.add(plaque);
+    // snow: flakes that fall, settle, and get thrown up again whenever the globe is shaken
+    const N = 1800, flakes = new Float32Array(N * 3), seeds = new Float32Array(N * 4);
+    for (let i = 0; i < N; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, w = Math.sin(i * 39.42) * 9631.7, z = Math.sin(i * 7.13) * 3141.5; seeds.set([u - Math.floor(u), v - Math.floor(v), w - Math.floor(w), z - Math.floor(z)], i * 4); }
+    const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(flakes, 3));
+    const snowP = new THREE.Points(fg, new THREE.PointsMaterial({ map: radialTex([[0, 'rgba(255,255,255,1)'], [0.5, 'rgba(255,255,255,0.8)'], [1, 'rgba(255,255,255,0)']]), size: 0.16, transparent: true, depthWrite: false }));
+    snowP.frustumCulled = false; inner.add(snowP); gState.snow = snowP; gState.seeds = seeds;
+    // the desk outside, and the things on it
+    const desk = new THREE.Mesh(new THREE.BoxGeometry(90, 2, 60), M(0x7A5234, { roughness: 0.55 })); desk.position.set(0, -3.4, -4); desk.receiveShadow = true; globeG.add(desk);
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(140, 60), M(0x4A3A30)); wall.position.set(0, 20, -34); globeG.add(wall);
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(22, 16), new THREE.MeshBasicMaterial({ color: 0x1E2A44 })); win.position.set(18, 16, -33.9); globeG.add(win);
+    for (let k = 0; k < 40; k++) { const st = new THREE.Mesh(new THREE.CircleGeometry(0.08 + (k % 3) * 0.04, 6), new THREE.MeshBasicMaterial({ color: 0xFFF6E0 })); st.position.set(8 + (k * 37 % 20), 9 + (k * 23 % 14), -33.8); globeG.add(st); }
+    [[18, 16, 22.6, 0.6], [18, 16, 0.6, 16.6], [18, 8, 22.6, 0.6], [18, 24, 22.6, 0.6], [7, 16, 0.6, 16.6], [29, 16, 0.6, 16.6]].forEach(([x, y, w, h]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.4), M(0xE8DCC8)); b.position.set(x, y, -33.8); globeG.add(b); });
+    // desk lamp
+    const lamp = new THREE.Group(); lamp.position.set(-17, -2.4, -10); globeG.add(lamp);
+    const lb = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.6, 0.6, 24), M(0x2F5F4A, { metalness: 0.4, roughness: 0.4 })); lb.position.y = 0.3; lamp.add(lb);
+    rod(lamp, V(0, 0.6, 0), V(2, 10, 1), 0.3, M(0xC9A04A, { metalness: 0.6 })); rod(lamp, V(2, 10, 1), V(8, 14, 4), 0.28, M(0xC9A04A, { metalness: 0.6 }));
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(3, 3.6, 24, 1, true), new THREE.MeshStandardMaterial({ color: 0x2F5F4A, side: THREE.DoubleSide, metalness: 0.3 })); shade.position.set(8.5, 13.5, 4.5); shade.rotation.set(0.35, 0, -0.5); lamp.add(shade);
+    const bulbL = new THREE.PointLight(0xFFD9A0, 1.6, 80, 1.3); bulbL.position.set(8.5, 12, 4.5); lamp.add(bulbL);
+    const bulbM = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 8), new THREE.MeshBasicMaterial({ color: 0xFFF1C8 })); bulbM.position.set(8.9, 12.2, 4.8); lamp.add(bulbM);
+    // coffee mug with steam
+    const mug = new THREE.Group(); mug.position.set(17, -2.4, -2); globeG.add(mug);
+    const mb = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.2, 5, 24), M(0xE8E2D4)); mb.position.y = 2.5; mb.castShadow = true; mug.add(mb);
+    const coffee = new THREE.Mesh(new THREE.CircleGeometry(2.25, 24), M(0x3A2418)); coffee.rotation.x = -Math.PI / 2; coffee.position.y = 4.8; mug.add(coffee);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.35, 8, 16, Math.PI), M(0xE8E2D4)); handle.position.set(2.4, 2.6, 0); handle.rotation.z = -Math.PI / 2; mug.add(handle);
+    gState.steam = []; for (let k = 0; k < 6; k++) { const st = new THREE.Mesh(new THREE.IcosahedronGeometry(0.6, 0), new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.18, depthWrite: false })); mug.add(st); gState.steam.push(st); }
+    // a giant pencil and a stack of books
+    const pencil = new THREE.Group(); pencil.position.set(6, -2.0, 15); pencil.rotation.y = 0.5; globeG.add(pencil);
+    const pb = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 14, 6), M(0xF2C14E)); pb.rotation.z = Math.PI / 2; pencil.add(pb);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2, 6), M(0xE8C89A)); tip.rotation.z = -Math.PI / 2; tip.position.x = 8; pencil.add(tip);
+    const lead = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.65, 6), M(0x2B2D33)); lead.rotation.z = -Math.PI / 2; lead.position.x = 8.8; pencil.add(lead);
+    const eraser = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.2, 6), M(0xE89AA0)); eraser.rotation.z = Math.PI / 2; eraser.position.x = -7.6; pencil.add(eraser);
+    [[0x8C2F39, 7], [0x2F4A6E, 6.4], [0xD9A456, 6.8], [0x2F5F4A, 6]].forEach(([c, w], k) => { const bk = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2, 9), M(c)); bk.position.set(-20, -1.8 + k * 1.2, 10); bk.rotation.y = k * 0.12; bk.castShadow = true; globeG.add(bk); });
+    // the hand that comes to shake it
+    const hand = new THREE.Group(); globeG.add(hand); gState.hand = hand;
+    const skin = M(0xF0C8A0), skin2 = M(0xE0B08A);
+    facet(hand, skin, V(0, 0, 0), [1.6, 3.2, 3.4], null, 1);
+    [[-1.9, 1.2], [-2.0, 0.1], [-1.9, -1.0], [-1.7, -2.0]].forEach(([y, z], k) => { const f = new THREE.Group(); f.position.set(-1.2, y + 1.2, z); hand.add(f); rod(f, V(0, 0, 0), V(-2.2, -0.3, 0), 0.55 - k * 0.04, skin); rod(f, V(-2.2, -0.3, 0), V(-3.4, -1.2, 0), 0.5 - k * 0.04, skin2); });
+    rod(hand, V(-0.6, 2.4, 1.8), V(-2.4, 3.0, 2.6), 0.6, skin); rod(hand, V(-2.4, 3.0, 2.6), V(-3.2, 2.2, 3.2), 0.55, skin2);
+    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 3, 16), M(0x3A5A8A)); cuff.rotation.z = Math.PI / 2; cuff.position.set(2.8, 0, 0); hand.add(cuff);
+    rod(hand, V(4, 0, 0), V(40, 0, 0), 2.1, M(0x3A5A8A));
+  }]);
+  function shakeInfo(t) {   // returns seconds since the last shake, and the hand/wobble envelope
+    const T = gState.SHAKE, s = (t - 6) % T, phase = s < 0 ? s + T : s;
+    return { since: phase, first: t < 6 };
+  }
+  function updateGlobe(t) {
+    const { GR, GCY, seeds } = gState, info = shakeInfo(t), s = info.since, N = seeds.length / 4, pa = gState.snow.geometry.attributes.position;
+    // hand: slides in (0–1.2 s), shakes (1.2–3.2 s), slides out (3.2–4.6 s)
+    const handIn = s < 1.2 ? s / 1.2 : s < 3.2 ? 1 : s < 4.6 ? 1 - (s - 3.2) / 1.4 : 0, shaking = s > 1.2 && s < 3.2;
+    const e = handIn * handIn * (3 - 2 * handIn);
+    gState.hand.visible = !info.first && e > 0.01;
+    const wob = (!info.first && shaking) ? Math.sin(s * 22) * 0.035 * Math.sin((s - 1.2) / 2 * Math.PI) : 0;
+    gState.hand.position.set(12.4 + (1 - e) * 26, -0.9 + wob * 20, 0.6); gState.hand.rotation.z = wob * 3;
+    gState.inner.rotation.z = wob; gState.inner.rotation.x = wob * 0.5;
+    // flakes: thrown up at the shake, swirl, drift down and settle; before the first shake they just fall
+    const sinceThrow = info.first ? t + 12 : Math.max(0, s - 1.4);
+    for (let i = 0; i < N; i++) {
+      const a0 = seeds[i * 4] * Math.PI * 2, rr = Math.sqrt(seeds[i * 4 + 1]) * 8.6, top = 4 + seeds[i * 4 + 2] * 7.5, fall = 0.28 + seeds[i * 4 + 3] * 0.3;
+      const rise = info.first ? 1 : Math.min(1, sinceThrow / 0.8);
+      let y = rise < 1 ? 0.05 + (top - 0.05) * (1 - Math.pow(1 - rise, 3)) : top - fall * (sinceThrow - 0.8);
+      if (info.first) y = top - fall * (sinceThrow);
+      y = Math.max(0.06 + seeds[i * 4 + 3] * 0.04, y);
+      const swirl = info.first ? 0 : 2.4 * (1 - Math.exp(-sinceThrow / 2.5));
+      const a = a0 + swirl * (1.2 - rr / 10) + Math.sin(t * 0.8 + i) * 0.02 * (y > 0.2 ? 1 : 0);
+      const maxR = Math.sqrt(Math.max(0, GR * GR - (y - GCY) * (y - GCY))) - 0.4;
+      const r = Math.min(rr + (y > 0.2 ? Math.sin(t * 1.3 + i * 0.7) * 0.15 : 0), maxR);
+      pa.setXYZ(i, Math.cos(a) * r, y, Math.sin(a) * r);
+    }
+    pa.needsUpdate = true;
+    gState.star.rotation.y = t * 0.8; gState.star.scale.setScalar(1 + Math.sin(t * 3) * 0.08);
+    gState.steam.forEach((st, k) => { const u = (t * 0.25 + k / 6) % 1; st.position.set(Math.sin(u * 6 + k) * 0.6, 5 + u * 6, Math.cos(u * 5 + k) * 0.4); st.scale.setScalar(0.6 + u * 1.6); st.material.opacity = 0.2 * (1 - u); });
+    scarfTails.forEach((pv, i) => { pv.rotation.y = Math.sin(t * 5 + i) * 0.25; pv.rotation.z = 0.2 + Math.sin(t * 4 + i * 2) * 0.12; });
+  }
+
+  ENV.globe = { sky: roomTex, fog: 0x2A2018, near: 45, far: 140, sun: 0xFFE8D0, sunI: 0.55, hemi: 0.55, hemiSky: 0xFFE4C8, hemiGround: 0x5A4030 };
   ENV.wet = { sky: morningTex, fog: 0xDCE6EC, near: 30, far: 120, sun: 0xFFF0D8, sunI: 1.0, hemi: 0.8, hemiSky: 0xE6F0FA, hemiGround: 0x9A9080 };
   let sceneName = 'island';
   const islandOnly = [island, sea, glint];
@@ -2942,7 +3069,8 @@
     market.visible = night.visible = basket.visible = name === 'market';
     circleG.visible = name === 'circle';
     kyotoG.visible = name === 'kyoto';
-    polarG.visible = name === 'polar'; winterGear.forEach(o => { o.visible = name === 'polar'; });
+    polarG.visible = name === 'polar'; winterGear.forEach(o => { o.visible = name === 'polar' || name === 'globe'; });
+    globeG.visible = name === 'globe';
     jungleG.visible = name === 'jungle'; jungleGear.forEach(o => { o.visible = name === 'jungle'; });
     skyG.visible = name === 'sky'; skyGear.forEach(o => { o.visible = name === 'sky'; });
     parisG.visible = name === 'paris'; parisGear.forEach(o => { o.visible = name === 'paris'; });
@@ -2956,11 +3084,11 @@
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl';
-    setEnv(isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe';
+    setEnv(isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe; });
+    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe; });
+    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -2998,7 +3126,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -3065,15 +3193,15 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe'].includes(location.hash)) applyScene(location.hash.slice(1));
   // editing the #hash by hand now switches scenes too (bug spotted by Kimi)
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SCENE_LABEL[h] && h !== sceneName) applyScene(h); });
   const btnMusic = document.getElementById('music');
