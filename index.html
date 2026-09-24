@@ -3384,9 +3384,9 @@
       let d = ra - pg.a; d = Math.atan2(Math.sin(d), Math.cos(d));
       const near = Math.abs(pg.r - R_PATH) < 2.6, win = 0.55, fly = near && Math.abs(d) < win ? 1 - Math.abs(d) / win : 0;
       const up = Math.sin(Math.min(1, fly * 1.4) * Math.PI / 2);
-      const rr = pg.r + (pg.r < R_PATH ? -1 : 1) * up * 1.2;
-      pg.g.position.set(Math.cos(pg.a) * rr, up * 2.2, Math.sin(pg.a) * rr);
-      pg.g.rotation.y = up > 0.05 ? -pg.a + (pg.r < R_PATH ? Math.PI / 2 : -Math.PI / 2) : pg.yaw + Math.sin(t * 0.3 + pg.ph) * 0.8;
+      const rr = pg.r + (8.8 - pg.r) * up;   // everyone escapes outward, over the canal, away from the camera
+      pg.g.position.set(Math.cos(pg.a) * rr, up * 3.2, Math.sin(pg.a) * rr);
+      pg.g.rotation.y = up > 0.05 ? -pg.a : pg.yaw + Math.sin(t * 0.3 + pg.ph) * 0.8;
       const flap = up > 0.05 ? Math.sin(t * 22 + pg.ph) * 0.9 : 0;
       pg.wings.forEach(w => { w.rotation.x = -w.userData.s * flap; });
       pg.head.rotation.z = up > 0.05 ? 0 : -Math.max(0, Math.sin(t * 5 + pg.ph)) * 0.8;   // pecking
@@ -3492,6 +3492,10 @@
     } else {
       tmp.set(Math.cos(psi) * dist, h, Math.sin(psi) * dist);
       rider.localToWorld(tmp);
+      if (sceneName === 'venice') {   // stay on the campo: never out over the canal, the bridges or into the palazzi
+        const cr = Math.hypot(tmp.x, tmp.z), want = cr > R_PATH ? Math.max(3.4, R_PATH - (cr - R_PATH)) : Math.max(3.4, cr), k = want / (cr || 1);   // mirror outside shots to the inside
+        tmp.x *= k; tmp.z *= k;
+      }
     }
     focus.set(0.1, 1.3, 0); rider.localToWorld(focus);
     camera.position.copy(tmp); camera.lookAt(focus);
