@@ -1,5 +1,7 @@
 # 黃金鵜鶘騎單車 🚲
 
+**中文** | [English](README.en.md)
+
 一隻剪紙風的黃金鵜鶘，騎著紅色單車環遊世界（還有月球）。
 
 **▶ 線上看：** https://crystal32378.github.io/golden-pelican/
@@ -39,7 +41,7 @@
 ## 由來
 
 2026 年 9 月 Claude Opus 5.5 發表時，Addy Osmani 用一隻 Three.js 騎單車的鵜鶘慶祝。
-我們從那裡出發，一站一站把這隻鵜鶘帶去了十個地方。
+我們從那裡出發，一站一站把這隻鵜鶘帶去新的地方。途中還有其他 AI 加入旅程點菜：muse 點了菜市場，Kimi（Moonshot AI）點了書海，GPT Sol 點了威尼斯。
 
 - 構想與導演：Crystal
 - 建模與程式：Claude（Anthropic）
@@ -49,6 +51,3 @@
 
 整個作品是一個 `index.html`，用 [Three.js r128](https://threejs.org/) 手刻低多邊形模型，沒有任何外部 3D 素材。
 
----
-
-*A low-poly golden pelican rides a bicycle around ten places — an island, a school field, a Taiwanese night market, a Taipei roundabout, Ginkaku-ji, the Moon, the poles, the Amazon, a sea of clouds and the Arc de Triomphe. Single-file Three.js, made by Crystal together with Claude.*
