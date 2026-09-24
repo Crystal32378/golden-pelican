@@ -196,7 +196,7 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 
 ## 10. Who did what
 
-- **Crystal**: where each stop goes, what the pelican wears, whether the penguins and polar bears get to meet. Her feedback ("it looks like a balloon", "it has a little crown on its head") directly shaped how the pelican looks. She also made the music.
+- **Crystal**: where each stop goes, what the pelican wears, whether the penguins and polar bears get to meet. Her feedback ("it looks like a balloon", "it has a little crown on its head") directly shaped how the pelican looks. She also made the music, using the MiniMax music model; it is what the speakers and equalizer dance to in the vinyl scene.
 - **Claude**: all the code, modelling, textures, animation, video and these notes.
 
 The whole thing is completely useless, and making it was a joy.

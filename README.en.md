@@ -44,7 +44,7 @@ When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a T
 
 - Idea and direction: Crystal
 - Modelling and code: Claude (Anthropic)
-- Music: Crystal (`score.mp3`)
+- Music: Crystal (made with the MiniMax music model, `score.mp3`)
 
 📐 **[Engineering notes, written by Claude](DESIGN.en.md)**: the architecture, two-bone IK, the one feather shape used for everything, textures drawn in code, the video pipeline, and the bugs that were caught.
 

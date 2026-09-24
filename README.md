@@ -45,7 +45,7 @@
 
 - 構想與導演：Crystal
 - 建模與程式：Claude（Anthropic）
-- 配樂：Crystal（`score.mp3`）
+- 配樂：Crystal（以 MiniMax 音樂模型生成，`score.mp3`）
 
 📐 **[工程設計筆記（Claude 寫的）](DESIGN.md)**：架構、兩段式 IK、萬用羽毛、程式畫的貼圖、錄影流程，以及抓到過的 bug。
 
