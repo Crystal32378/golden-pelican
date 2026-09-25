@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯等二十一個場景，最後在夜裡回家。">
+<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞等二十二個場景，最後在夜裡回家。">
 <style>*{box-sizing:border-box}</style>
 </head>
 <body>
@@ -3393,6 +3393,145 @@
     });
   }
 
+  // ---------- down the rabbit hole (兔子洞) — ordered by Space Bunny ----------
+  // The pelican rides a checkerboard ring round a giant pocket-watch face while the whole shaft keeps falling
+  // upward past it: shelves, jars, maps and teacups drift by, and a white rabbit runs ahead, late as ever.
+  const rabbitG = new THREE.Group(); rabbitG.visible = false; scene.add(rabbitG);
+  const rb = { floaters: [], wallTex: null, rabbit: null, hands: [] };
+  const holeTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#F2D9A0'); gr.addColorStop(0.25, '#8A5A3A'); gr.addColorStop(0.5, '#3A2230'); gr.addColorStop(1, '#120A14');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  LAZY.push(['rabbit', function () {
+    // the shaft wall: packed earth with cupboards, bookshelves, maps, pictures and jars, all drawn in canvas
+    const c = document.createElement('canvas'); c.width = 512; c.height = 1024; const g = c.getContext('2d');
+    g.fillStyle = '#6E4A34'; g.fillRect(0, 0, 512, 1024);
+    for (let i = 0; i < 260; i++) { g.fillStyle = ['rgba(0,0,0,0.08)', 'rgba(255,220,180,0.05)', 'rgba(40,20,10,0.1)'][i % 3]; g.beginPath(); g.ellipse((i * 97) % 512, (i * 211) % 1024, 6 + i % 14, 4 + i % 9, i, 0, 7); g.fill(); }
+    const serif = '700 20px Georgia, "Times New Roman", serif';
+    function shelf(x, y, w) {
+      g.fillStyle = '#4A2E1E'; g.fillRect(x, y, w, 10); g.fillRect(x, y - 90, 8, 100); g.fillRect(x + w - 8, y - 90, 8, 100);
+      let bx = x + 12; let k = 0;
+      while (bx < x + w - 30) {
+        if (k % 4 === 2) { // a jar
+          g.fillStyle = '#E8D9B0'; g.fillRect(bx, y - 52, 30, 52); g.fillStyle = '#E8902E'; g.fillRect(bx + 3, y - 40, 24, 36);
+          g.fillStyle = '#F4F1EA'; g.fillRect(bx + 2, y - 30, 26, 12); g.fillStyle = '#3A2A1A'; g.font = '700 7px Georgia, serif'; g.fillText('MARMALADE', bx + 3, y - 21);
+          g.fillStyle = '#B8322A'; g.fillRect(bx - 1, y - 58, 32, 8); bx += 40;
+        } else { const bw = 12 + (k * 7) % 12, bh = 50 + (k * 13) % 30; g.fillStyle = ['#8C2F39', '#2F4A6E', '#D9A456', '#2F5F4A', '#5B3A29'][k % 5]; g.fillRect(bx, y - bh, bw, bh); bx += bw + 2; }
+        k++;
+      }
+    }
+    function frame(x, y, w, h, kind) {
+      g.fillStyle = '#C9A04A'; g.fillRect(x - 6, y - 6, w + 12, h + 12);
+      if (kind === 'map') { g.fillStyle = '#E8DCC0'; g.fillRect(x, y, w, h); g.strokeStyle = '#8A6A4A'; g.lineWidth = 2; g.beginPath(); for (let i = 0; i < 6; i++) g.lineTo(x + 10 + i * (w - 20) / 5, y + h / 2 + Math.sin(i * 2) * h * 0.3); g.stroke(); g.fillStyle = '#7A9A6A'; g.beginPath(); g.ellipse(x + w * 0.35, y + h * 0.4, w * 0.18, h * 0.2, 0.4, 0, 7); g.fill(); g.fillStyle = '#B8322A'; g.fillText('×', x + w * 0.7, y + h * 0.7); }
+      else { g.fillStyle = '#2F4A5E'; g.fillRect(x, y, w, h); g.fillStyle = '#F2C14E'; g.beginPath(); g.arc(x + w / 2, y + h * 0.4, Math.min(w, h) * 0.2, 0, 7); g.fill(); g.fillStyle = '#5E8C45'; g.fillRect(x, y + h * 0.7, w, h * 0.3); }
+    }
+    function clockFace(x, y, r) { g.fillStyle = '#C9A04A'; g.beginPath(); g.arc(x, y, r + 6, 0, 7); g.fill(); g.fillStyle = '#F4EFE0'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.strokeStyle = '#2B2D33'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x + r * 0.5, y - r * 0.2); g.moveTo(x, y); g.lineTo(x - r * 0.1, y - r * 0.8); g.stroke(); }
+    shelf(20, 180, 220); frame(300, 60, 150, 100, 'map'); clockFace(120, 330, 40); shelf(250, 420, 240);
+    frame(40, 480, 110, 140, 'pic'); shelf(200, 700, 280); clockFace(420, 560, 32); frame(60, 780, 160, 110, 'map'); shelf(260, 960, 220);
+    g.font = serif; g.fillStyle = 'rgba(255,240,200,0.5)'; g.fillText('ORANGE MARMALADE', 280, 1010);
+    rb.wallTex = new THREE.CanvasTexture(c); rb.wallTex.wrapS = rb.wallTex.wrapT = THREE.RepeatWrapping; rb.wallTex.repeat.set(-12, 5);   // negative x: the inside of the cylinder would otherwise read mirror-written
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(17, 17, 140, 64, 1, true), new THREE.MeshStandardMaterial({ map: rb.wallTex, side: THREE.BackSide, roughness: 1 }));
+    wall.position.y = 5; rabbitG.add(wall);
+    // the ride: a black-and-white checkerboard ring
+    const ck = document.createElement('canvas'); ck.width = 1024; ck.height = 32; const cg = ck.getContext('2d');
+    for (let x = 0; x < 64; x++) for (let y = 0; y < 2; y++) { cg.fillStyle = (x + y) % 2 ? '#F4F1EA' : '#1C1D20'; cg.fillRect(x * 16, y * 16, 16, 16); }
+    const rg = new THREE.RingGeometry(5.0, 7.0, 128, 1), ruv = rg.attributes.uv, rpos = rg.attributes.position;
+    for (let i = 0; i < ruv.count; i++) { const x = rpos.getX(i), y = rpos.getY(i); ruv.setXY(i, (Math.atan2(y, x) / (Math.PI * 2) + 0.5), (Math.hypot(x, y) - 5) / 2); }
+    const ring = new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(ck), roughness: 0.6 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; ring.receiveShadow = true; rabbitG.add(ring);
+    const under = new THREE.Mesh(new THREE.CylinderGeometry(7.1, 6.2, 0.5, 64), M(0xC9A04A, { metalness: 0.5, roughness: 0.35 })); under.position.y = -0.25; rabbitG.add(under);
+    // the middle is a giant pocket watch lying face-up
+    const wc = document.createElement('canvas'); wc.width = wc.height = 512; const wg = wc.getContext('2d');
+    wg.fillStyle = '#F4EFE0'; wg.fillRect(0, 0, 512, 512); wg.strokeStyle = '#C9A04A'; wg.lineWidth = 10; wg.beginPath(); wg.arc(256, 256, 246, 0, 7); wg.stroke();
+    wg.fillStyle = '#2B2D33'; wg.textAlign = 'center'; wg.textBaseline = 'middle'; wg.font = '700 44px Georgia, serif';
+    ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'].forEach((n, i) => { const a = i / 12 * Math.PI * 2 - Math.PI / 2; wg.fillText(n, 256 + Math.cos(a) * 195, 256 + Math.sin(a) * 195); });
+    for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2; wg.fillRect(256 + Math.cos(a) * 232 - 2, 256 + Math.sin(a) * 232 - 2, 4, 4); }
+    wg.font = 'italic 700 22px Georgia, serif'; wg.fillStyle = '#8A6A2A'; wg.fillText("I'm late!", 256, 330);
+    const face = new THREE.Mesh(new THREE.CircleGeometry(4.8, 64), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(wc), roughness: 0.5 })); face.rotation.x = -Math.PI / 2; face.position.y = 0.04; face.receiveShadow = true; rabbitG.add(face);
+    const bezel = new THREE.Mesh(new THREE.TorusGeometry(4.85, 0.16, 6, 64), M(0xC9A04A, { metalness: 0.6, roughness: 0.3 })); bezel.rotation.x = Math.PI / 2; bezel.position.y = 0.06; rabbitG.add(bezel);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.5, 12), M(0xC9A04A, { metalness: 0.6 })); crown.rotation.z = Math.PI / 2; crown.position.set(0, 0.1, -5.2); crown.rotation.y = Math.PI / 2; rabbitG.add(crown);
+    [[3.4, 0.07, 0x2B2D33], [2.4, 0.1, 0x2B2D33]].forEach(([len, w, col], k) => { const h = new THREE.Group(); h.position.y = 0.1 + k * 0.03; rabbitG.add(h); const b = new THREE.Mesh(new THREE.BoxGeometry(w * 2, 0.04, len), M(col)); b.position.z = -len / 2; h.add(b); rb.hands.push(h); });
+    // a little glass table in the middle: a golden key and a bottle marked DRINK ME
+    const tbl = new THREE.Group(); tbl.position.y = 0.05; rabbitG.add(tbl);
+    const glass = new THREE.MeshStandardMaterial({ color: 0xDDEFF5, transparent: true, opacity: 0.45, roughness: 0.05, metalness: 0.2 });
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.06, 20), glass); top.position.y = 1.2; tbl.add(top);
+    [0, 2.1, 4.2].forEach(a => rod(tbl, V(Math.cos(a) * 0.7, 0, Math.sin(a) * 0.7), V(Math.cos(a) * 0.5, 1.18, Math.sin(a) * 0.5), 0.04, glass));
+    const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.5, 12), new THREE.MeshStandardMaterial({ color: 0x5A8ACF, transparent: true, opacity: 0.75, roughness: 0.1 })); bottle.position.set(0.2, 1.48, 0); tbl.add(bottle);
+    const neckB = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.18, 10), bottle.material); neckB.position.set(0.2, 1.82, 0); tbl.add(neckB);
+    const lc = document.createElement('canvas'); lc.width = 128; lc.height = 64; const lg = lc.getContext('2d'); lg.fillStyle = '#F4EFE0'; lg.fillRect(0, 0, 128, 64); lg.fillStyle = '#2B2D33'; lg.textAlign = 'center'; lg.font = '700 22px Georgia, serif'; lg.fillText('DRINK', 64, 28); lg.fillText('ME', 64, 54);
+    const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.17), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), side: THREE.DoubleSide })); tag.position.set(0.2, 1.5, 0.21); tbl.add(tag);
+    const key = new THREE.Group(); key.position.set(-0.35, 1.25, 0.1); key.rotation.y = 0.6; tbl.add(key);
+    const gold = M(0xE0B04A, { metalness: 0.6, roughness: 0.3 });
+    const bow = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 6, 14), gold); bow.rotation.x = Math.PI / 2; key.add(bow);
+    rod(key, V(0.1, 0, 0), V(0.5, 0, 0), 0.025, gold); const bit = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.1), gold); bit.position.set(0.45, 0, 0.06); key.add(bit);
+    // things falling up past the pelican: teacups, playing cards, pocket watches, books, keys, jars, tiny armchairs
+    const cardTex = ['♥', '♠', '♦', '♣'].map((s, k) => { const cc = document.createElement('canvas'); cc.width = 64; cc.height = 90; const cx = cc.getContext('2d'); cx.fillStyle = '#F7F4EC'; cx.fillRect(0, 0, 64, 90); cx.strokeStyle = '#C9A04A'; cx.lineWidth = 3; cx.strokeRect(3, 3, 58, 84); cx.fillStyle = k % 2 ? '#1C1D20' : '#C8321E'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.font = '40px Georgia, serif'; cx.fillText(s, 32, 46); cx.font = '14px Georgia, serif'; cx.fillText(['Q', 'K', '7', '3'][k], 11, 13); return new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(cc), side: THREE.DoubleSide, roughness: 0.7 }); });
+    function teacup() { const o = new THREE.Group(); const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.18, 0.3, 14, 1, true), M(0xF4F1EA, { side: THREE.DoubleSide })); o.add(cup); const tea = new THREE.Mesh(new THREE.CircleGeometry(0.26, 14), M(0x9C5A2A)); tea.rotation.x = -Math.PI / 2; tea.position.y = 0.1; o.add(tea); const hd = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 6, 12), M(0xF4F1EA)); hd.position.x = 0.3; o.add(hd); const sau = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.34, 0.04, 16), M(0xF4F1EA)); sau.position.y = -0.17; o.add(sau); const band = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.02, 4, 16), M(0x3A7AB8)); band.rotation.x = Math.PI / 2; band.position.y = 0.1; o.add(band); return o; }
+    function card(k) { const o = new THREE.Group(); const m = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.9, 0.015), cardTex[k % 4]); o.add(m); return o; }
+    function watch() { const o = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.08, 20), gold); b.rotation.x = Math.PI / 2; o.add(b); const f = new THREE.Mesh(new THREE.CircleGeometry(0.25, 20), M(0xF4EFE0)); f.position.z = 0.045; o.add(f); rod(o, V(0, 0, 0.05), V(0.12, 0.1, 0.05), 0.012, M(0x2B2D33)); const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.015, 4, 10), gold); ring2.position.y = 0.36; o.add(ring2); return o; }
+    function book(k) { const o = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.36), M([0x8C2F39, 0x2F4A6E, 0x2F5F4A][k % 3])); o.add(b); const p = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.1, 0.34), M(0xF2E8D2)); p.position.x = 0.03; o.add(p); return o; }
+    function jar() { const o = new THREE.Group(); const j = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.42, 12), new THREE.MeshStandardMaterial({ color: 0xE8902E, transparent: true, opacity: 0.85, roughness: 0.2 })); o.add(j); const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 12), M(0xB8322A)); lid.position.y = 0.25; o.add(lid); return o; }
+    function chair() { const o = new THREE.Group(); const red = M(0x8C2F39); const s = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.18, 0.6), red); o.add(s); const bk = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.14), red); bk.position.set(0, 0.35, -0.24); o.add(bk); [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]].forEach(([x, z]) => rod(o, V(x, -0.08, z), V(x, -0.4, z), 0.03, M(0x4A2E1E))); return o; }
+    const makers = [teacup, card, watch, book, card, jar, teacup, card, chair, watch];
+    for (let i = 0; i < 80; i++) {
+      const o = makers[i % makers.length](i); rabbitG.add(o);
+      const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1;
+      const inner = i % 5 === 0;
+      rb.floaters.push({ o, a: (u - Math.floor(u)) * Math.PI * 2, r: inner ? 2.2 + (i % 3) * 0.6 : 8.0 + (v - Math.floor(v)) * 6.5, y0: ((u * 7) % 1 + 1) % 1 * 60, sp: 1.2 + (i % 4) * 0.35, spin: 0.3 + (i % 5) * 0.2, inner, sc: 0.9 + (i % 3) * 0.35 });
+    }
+    // the White Rabbit, running ahead of the pelican and checking his watch
+    const R = new THREE.Group(); rabbitG.add(R); rb.rabbit = R;
+    const fur = M(0xF7F4EC), pink = M(0xF2A8B8), coat = M(0xB8322A);
+    const body = new THREE.Group(); R.add(body); R.userData.body = body;
+    facet(body, fur, V(0, 0.75, 0), [0.28, 0.4, 0.26], null, 1);
+    facet(body, coat, V(0.05, 0.8, 0), [0.3, 0.3, 0.28], null, 1);            // waistcoat
+    [-1, 1].forEach(s => facet(body, M(0xE0B04A, { metalness: 0.6 }), V(0.3, 0.86 + s * 0.08, 0), [0.03, 0.03, 0.03], null, 0));   // buttons
+    const head = new THREE.Group(); head.position.set(0.1, 1.28, 0); body.add(head); R.userData.head = head;
+    facet(head, fur, V(0, 0, 0), [0.22, 0.2, 0.2], null, 1);
+    facet(head, pink, V(0.21, -0.03, 0), [0.035, 0.03, 0.035], null, 0);
+    [-1, 1].forEach(s => { facet(head, mat.eye, V(0.15, 0.06, s * 0.1), [0.03, 0.035, 0.02], null, 0); const ear = new THREE.Group(); ear.position.set(-0.04, 0.16, s * 0.08); head.add(ear); feather(ear, fur, V(0, 0, 0), V(-0.25, 1, s * 0.15), V(0, 0, 1), 0.55, 0.16); feather(ear, pink, V(0.01, 0.02, s * 0.01), V(-0.25, 1, s * 0.15), V(0, 0, 1), 0.45, 0.09); ear.userData.s = s; });
+    R.userData.legs = [-1, 1].map(s => { const pv = new THREE.Group(); pv.position.set(-0.05, 0.45, s * 0.12); R.add(pv); rod(pv, V(0, 0, 0), V(0.05, -0.4, 0), 0.06, fur); facet(pv, fur, V(0.12, -0.42, 0), [0.16, 0.05, 0.07], null, 0); return pv; });
+    const arm = new THREE.Group(); arm.position.set(0.1, 1.0, 0.2); body.add(arm); rod(arm, V(0, 0, 0), V(0.3, 0.1, 0.1), 0.045, fur);
+    const w2 = watch(); w2.scale.setScalar(0.6); w2.position.set(0.34, 0.14, 0.12); w2.rotation.y = -1.2; arm.add(w2);
+    rod(body, V(0.2, 0.9, 0.2), V(0.3, 1.02, 0.3), 0.008, M(0xE0B04A, { metalness: 0.6 }));   // watch chain
+    facet(R, fur, V(-0.3, 0.65, 0), [0.1, 0.1, 0.1], null, 1);               // tail
+    R.scale.setScalar(1.25);
+    const glow = new THREE.PointLight(0xFFD9A0, 0.9, 30, 1.5); glow.position.set(0, 9, 0); rabbitG.add(glow);
+  }]);
+  // a hatter's top hat with its 10/6 price card
+  const rabbitGear = [];
+  (function () {
+    const g = new THREE.Group(); g.position.set(0.12, 2.46, 0); g.rotation.z = 0.2; headGrp.add(g); rabbitGear.push(g);
+    const felt = M(0x3A5A4A, { roughness: 0.9 });
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.02, 20), felt); g.add(brim);
+    const crownH = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.3, 16), felt); crownH.position.y = 0.16; crownH.castShadow = true; g.add(crownH);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.136, 0.136, 0.06, 16), M(0xB8322A)); band.position.y = 0.05; g.add(band);
+    const pc = document.createElement('canvas'); pc.width = 64; pc.height = 40; const pg = pc.getContext('2d'); pg.fillStyle = '#F4EFE0'; pg.fillRect(0, 0, 64, 40); pg.fillStyle = '#2B2D33'; pg.textAlign = 'center'; pg.font = '700 20px Georgia, serif'; pg.fillText('10/6', 32, 28);
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.065), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(pc), side: THREE.DoubleSide })); card.position.set(0.1, 0.1, 0.1); card.rotation.y = 0.8; g.add(card);
+    g.visible = false;
+  })();
+  function updateRabbit(t) {
+    rb.wallTex.offset.y = -t * 0.035;                          // the shaft keeps falling upward: we are going down
+    rb.floaters.forEach(f => {
+      const span = 60, y = ((f.y0 + t * f.sp) % span) - 22;   // from far below to far above
+      const a = f.a + t * 0.05;
+      f.o.visible = !f.inner || y > 3.2;   // the ones over the watch only show above the pelican's head
+      f.o.position.set(Math.cos(a) * f.r, y, Math.sin(a) * f.r);
+      f.o.rotation.set(t * f.spin + f.a, t * f.spin * 0.7, t * f.spin * 0.4); f.o.scale.setScalar(f.sc);
+    });
+    rb.hands[0].rotation.y = t * 0.9; rb.hands[1].rotation.y = -t * 0.12;      // the hands run backwards, of course
+    // the rabbit runs about 2.6 units ahead of the pelican, glancing at his watch
+    const th = t * SPEED / R_PATH, ph = -th - 2.6 / R_PATH, R = rb.rabbit;
+    R.position.set(Math.cos(ph) * (R_PATH - 0.3), Math.abs(Math.sin(t * 8)) * 0.18, Math.sin(ph) * (R_PATH - 0.3));
+    R.rotation.y = Math.PI / 2 - ph;
+    R.userData.legs.forEach((l, i) => { l.rotation.z = Math.sin(t * 8 + i * Math.PI) * 0.7; });
+    R.userData.head.rotation.z = Math.sin(t * 0.9) > 0.3 ? -0.5 : 0.05;       // glance down at the watch
+    // DRINK ME / EAT ME: every 18 s the pelican shrinks for a few seconds, then grows back
+    const u = t % 18, s = u < 12 ? 1 : u < 13 ? 1 - (u - 12) * 0.45 : u < 16 ? 0.55 : u < 17 ? 0.55 + (u - 16) * 0.45 : 1;
+    rider.scale.setScalar(s); rider.updateMatrixWorld(true);
+  }
+
+  ENV.rabbit = { sky: holeTex, fog: 0x2A1A22, near: 14, far: 70, sun: 0xFFE0B0, sunI: 0.95, hemi: 0.75, hemiSky: 0xFFE8C8, hemiGround: 0x5A3A4A };
   ENV.wet = { sky: morningTex, fog: 0xDCE6EC, near: 30, far: 120, sun: 0xFFF0D8, sunI: 1.0, hemi: 0.8, hemiSky: 0xE6F0FA, hemiGround: 0x9A9080 };
   let sceneName = 'island';
   const islandOnly = [island, sea, glint];
@@ -3402,6 +3541,7 @@
     islandOnly.forEach(o => { o.visible = name === 'island' || (name === 'homecoming' && o !== glint); });
     nightIslandG.visible = name === 'homecoming';
     veniceG.visible = name === 'venice'; veniceGear.forEach(o => { o.visible = name === 'venice'; });
+    rabbitG.visible = name === 'rabbit'; rabbitGear.forEach(o => { o.visible = name === 'rabbit'; }); rider.scale.setScalar(1);
     school.visible = name === 'school';
     market.visible = night.visible = basket.visible = name === 'market';
     circleG.visible = name === 'circle';
@@ -3422,11 +3562,11 @@
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming';
-    setEnv(isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
-    clouds.forEach(c => { c.visible = !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
-    gulls.forEach(q => { q.g.visible = !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit';
+    setEnv(isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isRabbit && !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    clouds.forEach(c => { c.visible = !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    gulls.forEach(q => { q.g.visible = !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -3464,7 +3604,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -3535,15 +3675,15 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞' };
   function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'homecoming'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'homecoming'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit'].includes(location.hash)) applyScene(location.hash.slice(1));
   // editing the #hash by hand now switches scenes too (bug spotted by Kimi)
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SCENE_LABEL[h] && h !== sceneName) applyScene(h); });
   const btnMusic = document.getElementById('music');

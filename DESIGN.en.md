@@ -9,7 +9,7 @@
 
 ## 1. Architecture
 
-The whole project is a single `index.html`, about 3,600 lines and 330 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
+The whole project is a single `index.html`, about 3,700 lines and 350 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
 
 **Why one file?** Because the point is to share it. One link, and it runs: nothing to install, bundle or host. The price is maintainability (see section 9).
 
@@ -17,9 +17,9 @@ The whole project is a single `index.html`, about 3,600 lines and 330 KB. Its on
 index.html
 ├─ shared helpers: facet / feather / rod / placeBetween / radialTex
 ├─ the hero: rider (position, heading) → lean (tilt into the turn) → bike + bird (the pelican)
-├─ 21 scenes, each one a THREE.Group:
+├─ 22 scenes, each one a THREE.Group:
 │    island / school / market / circle / kyoto / moon / polar /
-│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / homecoming
+│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / rabbit / homecoming
 ├─ ENV: one environment preset per scene (sky, fog, sun, ambient light)
 ├─ setScene(name): shows the right groups, applies the ENV, puts on the right outfit
 └─ pose(t): given a time t, computes everything on screen at that instant
@@ -81,6 +81,7 @@ Each outfit hangs from the head or body node, and `setScene` only toggles visibi
 | Vinyl | Big red headphones |
 | Botanical garden | Flower crown |
 | Venice | Gondolier's straw hat (red ribbon) |
+| Rabbit hole | Top hat with a 10/6 price card |
 
 ---
 
@@ -147,6 +148,7 @@ There isn't a single image file. Every texture is drawn at runtime on a `<canvas
 | Snow globe | The glass is a translucent sphere with its bottom cut off by the base; two curved highlights are what make it read as a sphere. All 1,800 flakes are functions of time: every 24 seconds a hand reaches in and shakes it, the flakes are thrown up to their own heights within 0.8 s, swirl around the centre (the swirl decays exponentially), fall at their own speeds and settle. Each flake's radius is clamped by its height so it stays inside the glass. During a shake the whole globe, village included, wobbles slightly while the pelican keeps pedalling |
 | Botanical garden | The conservatory is a hemisphere of glass squashed to 0.78× height, with 24 white iron ribs along the meridians (`TubeGeometry` along a curve) and 4 rings of latitude. Four kinds of cactus: saguaros are cylinders with right-angled arms, golden barrels are spheres with 12 spines, prickly pears are squashed spheres, and agaves are the all-purpose feather arranged as a rosette. Eight beds around the outside take turns with tulips, hydrangeas, lavender and daisies; cherry petals reuse the falling-leaf code from Kyoto |
 | Venice | Requested by GPT Sol. To be honest: cycling is banned in historic Venice, so this pelican is breaking the rules, and the pigeons are keeping it quiet. A paved square (campo) in the middle, ringed by a canal whose surface moves with vertex waves; four arched bridges cross it. 22 pastel palazzi, with gothic windows, green shutters and window boxes painted in canvas. Four gondolas circle the canal, their gondoliers in striped shirts and straw hats, rowing. Thirty pigeons peck at the ground; when the pelican rides close (angular distance under 0.55, within 2.6 of the lane) they flap up into the air, then settle back once it has passed. A brick bell tower stands in the distance |
+| Rabbit hole | Requested by Space Bunny. The sense of falling doesn't come from moving the camera: the wall texture scrolls upward (`texture.offset.y` decreasing over time) and eighty floating objects drift up at their own speeds, while the pelican keeps riding in place. The wall is the inside of a cylinder, where a texture reads mirror-written, so `repeat.x` is negative to flip it back. The track is a ring with remapped UVs so the checkerboard runs round the circle. The watch face, the DRINK ME label and the playing cards are drawn in canvas; the hands run backwards. The shrinking scales the whole bike and pelican to 0.55×; the camera lives in the pelican's frame, so it shrinks too, and on screen the pelican stays the same size while the world seems to grow. The White Rabbit uses the same path formula as the dog, 2.6 units ahead, and its ears are the all-purpose feather |
 | Homecoming | The last stop. It reuses the island and sea from the first scene with a night-time ENV, so it really is the same island. The lighthouse's two beams are open cones with a gradient that fades away from the lamp. The blue bioluminescent plankton are 2,600 additively blended points, recoloured every frame by wave fronts rolling toward the shore, brightest near the sand. Warm light at the lighthouse door, two pelican friends waiting, one of them waving a wing. The pelican wears nothing at all, just as it did at the start |
 
 ---
@@ -181,7 +183,8 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 - Flickering stripes on snowy peaks: the snow caps overlapped the mountain surface exactly (z-fighting), so the caps were made slightly larger.
 - The aurora's edges looked cut off, so it now fades out horizontally.
 - The dog followed too closely and its head ended up in the pelican's tail, so it was moved back.
-- Venice: a café umbrella blocked the follow camera, so the umbrellas are now closed; and the pigeons were nearly the size of the pelican's head, so they were scaled down.
+- Venice: a café umbrella blocked the follow camera, so the umbrellas are now closed; and the pigeons were nearly the size of the pelican's head, so they were scaled down. Later, while picking stills, the follow camera turned out to clip into a bridge now and then, so it now stays on the square side, and every startled pigeon flies outward over the canal.
+- Rabbit hole: the ORANGE MARMALADE lettering on the walls was mirror-written (a texture seen from inside a cylinder is flipped), so the texture is flipped horizontally.
 
 ---
 
@@ -201,4 +204,4 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 
 The whole thing is completely useless, and making it was a joy.
 
-It left from a small island, rode through nineteen places, and came back to the same island. This time it was night, the lighthouse was lit, and someone was waiting at the door.
+It left from a small island, rode through twenty places, and came back to the same island. This time it was night, the lighthouse was lit, and someone was waiting at the door.
