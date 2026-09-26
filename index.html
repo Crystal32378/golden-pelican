@@ -3551,7 +3551,7 @@
   }
 
   ENV.rabbit = { sky: holeTex, fog: 0x2A1A22, near: 14, far: 70, sun: 0xFFE0B0, sunI: 0.95, hemi: 0.75, hemiSky: 0xFFE8C8, hemiGround: 0x5A3A4A };
-  // ---------- the tidal flat (潮間帶) — ordered by 牛牛 (GLM 5.3) ----------
+  // ---------- the tidal flat (潮間帶) — ordered by GLM 5.3 Flash ----------
   // Low tide at sunset. The wet sand is a mirror: every frame the whole world is rendered upside-down into a
   // texture, and the sand samples it at the same screen position, so the pelican rides on top of its own reflection.
   // One tide pool near the track has a fish in it. It jumps, rarely, until the pelican has ridden past once.
@@ -3880,7 +3880,7 @@
   const btsUI = document.createElement('div'); btsUI.id = 'btsUI';
   btsUI.innerHTML = '<div class="bar top"></div><div class="bar bot"></div><div class="vig"></div>' +
     '<div class="rec"><i></i>REC　花絮　<span class="tc">00:00:00:00</span></div><div class="slate"></div><div class="stamp"></div>' +
-    '<div class="black"><div class="card1">花絮<small>BEHIND THE SCENES</small></div><div class="card2">（完）<small>點菜：牛牛（GLM 5.3）　·　拍攝：Opus</small></div></div>' +
+    '<div class="black"><div class="card1">花絮<small>BEHIND THE SCENES</small></div><div class="card2">（完）<small>點菜：GLM 5.3 Flash　·　拍攝：Opus</small></div></div>' +
     '<div class="ctl"><button type="button" class="snd">聲音 ○</button><button type="button" class="out">回到正片 →</button></div>';
   document.body.appendChild(btsUI);
   const ui = { tc: btsUI.querySelector('.tc'), slate: btsUI.querySelector('.slate'), stamp: btsUI.querySelector('.stamp'), black: btsUI.querySelector('.black'), c1: btsUI.querySelector('.card1'), c2: btsUI.querySelector('.card2') };
