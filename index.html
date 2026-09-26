@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞、潮間帶等二十三個場景，最後在夜裡回家。">
+<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞、天空之鏡、島波海道、潮間帶等二十五個場景，最後在夜裡回家。">
 <style>*{box-sizing:border-box}</style>
 </head>
 <body>
@@ -3659,17 +3659,276 @@
   }
 
   ENV.tide = { sky: tideTex, fog: 0xE8A878, near: 60, far: 240, sun: 0xFFB070, sunI: 1.15, hemi: 0.72, hemiSky: 0xF4C8B0, hemiGround: 0x8A6450 };
-  // render helper: on the tidal flat, draw the upside-down world into the mirror texture first
+  // ---------- the sky mirror (天空之鏡, Salar de Uyuni) — requested by Astra ----------
+  // A few centimetres of water on the biggest salt flat in the world, and no wind: the sky is above and below.
+  // Same mirror trick as the tidal flat, but here the bike's own wake wrinkles the clouds it rides over.
+  const saltG = new THREE.Group(); saltG.visible = false; scene.add(saltG);
+  const sl = { g: saltG, ground: null, rt: null, rings: [], flamingos: [] };
+  const uyuniTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#2A64B8'); gr.addColorStop(0.28, '#6FA6DC'); gr.addColorStop(0.46, '#CFE4F4'); gr.addColorStop(0.5, '#EEF5FA');
+    gr.addColorStop(0.54, '#CFE4F4'); gr.addColorStop(0.72, '#6FA6DC'); gr.addColorStop(1, '#2A64B8');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  LAZY.push(['salt', function () {
+    sl.rt = new THREE.WebGLRenderTarget(512, 512);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { tMirror: { value: sl.rt.texture }, res: { value: new THREE.Vector2(1, 1) }, time: { value: 0 }, bike: { value: 0 }, tint: { value: new THREE.Color(0xF2F6FA) } },
+      vertexShader: 'varying vec3 wp; void main(){ vec4 w = modelMatrix * vec4(position,1.0); wp = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: [
+        'uniform sampler2D tMirror; uniform vec2 res; uniform float time; uniform float bike; uniform vec3 tint; varying vec3 wp;',
+        'float hexEdge(vec2 p){ p /= 1.7; vec2 r = vec2(1.0, 1.7320508), h = r*0.5;',
+        '  vec2 a = mod(p, r) - h, b = mod(p - h, r) - h; vec2 g = dot(a,a) < dot(b,b) ? a : b;',
+        '  vec2 q = abs(g); return 0.5 - max(dot(q, vec2(0.5, 0.8660254)), q.x); }',
+        'void main(){',
+        '  float r = length(wp.xz);',
+        '  float n = sin(wp.x*0.07+1.1)*cos(wp.z*0.06) + 0.5*sin((wp.x-wp.z)*0.045+0.4);',
+        '  float dry = smoothstep(0.6, 0.95, n) * smoothstep(10.0, 16.0, r);   // a few dry islands of hexagonal crust, well away from the track',
+        '  float ridge = 1.0 - smoothstep(0.0, 0.05, hexEdge(wp.xz));',
+        '  float a = atan(wp.z, wp.x);',
+        '  float behind = mod(a - bike, 6.2831853) * 6.0;                          // metres behind the bike, along the track',
+        '  float lat = r - 6.0, spread = 0.22 + behind*0.13;',
+        '  float wake = exp(-behind/6.0) * exp(-lat*lat/(spread*spread)) * smoothstep(0.0, 0.25, behind);',
+        '  vec2 uv = gl_FragCoord.xy / res;',
+        '  uv += vec2(sin(lat*13.0/spread - behind*2.0 + time*3.0), cos(lat*9.0/spread - behind*1.5 - time*2.5)) * 0.02 * wake;',
+        '  uv += vec2(sin(wp.x*0.9+time*0.5), cos(wp.z*0.8-time*0.4)) * 0.0008;',
+        '  vec3 col = texture2D(tMirror, uv).rgb * tint;',
+        '  col = mix(col, col*0.9, ridge*0.22*(1.0-dry)*smoothstep(3.0,8.0,r)*(1.0-smoothstep(30.0,80.0,r)));   // the crust shows faintly through the water',
+        '  col = mix(col, vec3(0.94,0.95,0.96), dry*0.9);',
+        '  col = mix(col, vec3(0.76,0.79,0.83), dry*ridge*0.7);',
+        '  col = mix(col, col + vec3(0.08), wake*0.35);                            // a little foam where the tyres cut the water',
+        '  gl_FragColor = vec4(col, 1.0);',
+        '}'].join('\n')
+    });
+    sl.ground = new THREE.Mesh(new THREE.PlaneGeometry(900, 900, 1, 1), mat); sl.ground.rotation.x = -Math.PI / 2; saltG.add(sl.ground);
+    // big cumulus sitting low all round, so the flat has clouds under its feet too
+    for (let i = 0; i < 16; i++) {
+      const a = i * 2.39996 + 0.4, r = 46 + (i % 5) * 10, y = 8 + (i % 4) * 4.5, g = new THREE.Group(); g.position.set(Math.cos(a) * r, y, Math.sin(a) * r); saltG.add(g);
+      const n = 4 + (i % 3);
+      for (let k = 0; k < n; k++) { const s = 2.6 + ((i * 3 + k * 5) % 4) * 0.7; const f = facet(g, mat_cloudS, V((k - n / 2) * 2.6, (k % 2) * 1.2 - (k === 0 ? 0.6 : 0), ((k * 7) % 3 - 1) * 1.4), [s, s * 0.72, s], [0, k, 0], 1); f.castShadow = false; }
+      g.rotation.y = -a;
+    }
+    // salt mounds, raked into rows by the salt workers
+    for (let row = 0; row < 3; row++) for (let k = 0; k < 8; k++) {
+      const a = 2.05 + k * 0.075 + row * 0.02, r = 11 + row * 1.6;
+      const m = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.62, 7), M(0xF6F6F2, { roughness: 1 })); m.position.set(Math.cos(a) * r, 0.3, Math.sin(a) * r); m.rotation.y = k; m.castShadow = true; saltG.add(m);
+    }
+    // a small flock of flamingos far out on the water, one leg each
+    const pink = M(0xF2A2AE), pink2 = M(0xE0788A);
+    for (let i = 0; i < 6; i++) {
+      const g = new THREE.Group(), a = 4.05 + i * 0.07 + (i % 2) * 0.03, r = 21 + (i % 3) * 1.3; g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); g.rotation.y = i * 1.1; saltG.add(g);
+      rod(g, V(0, 0, 0), V(0.02, 1.0, 0), 0.025, pink2);
+      facet(g, pink, V(0, 1.15, 0), [0.32, 0.18, 0.17], [0, 0, -0.15], 1);
+      feather(g, pink2, V(-0.25, 1.18, 0), V(-1, 0.1, 0), V(0, 1, 0), 0.22, 0.12);
+      const nk = new THREE.Group(); nk.position.set(0.22, 1.2, 0); g.add(nk);
+      nk.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(0, 0, 0), V(0.15, 0.3, 0), V(0.02, 0.55, 0), V(0.12, 0.72, 0)]), 10, 0.03, 5), pink));
+      facet(nk, pink, V(0.15, 0.74, 0), [0.07, 0.06, 0.06], null, 1);
+      const bk = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.16, 4), M(0x2B2D33)); bk.rotation.z = -Math.PI / 2 - 0.9; bk.position.set(0.23, 0.68, 0); nk.add(bk);
+      g.scale.setScalar(1.3); sl.flamingos.push({ nk, ph: i * 1.7 });
+    }
+    // the far Andes, low and violet on the horizon
+    for (let i = 0; i < 11; i++) {
+      const a = i / 11 * Math.PI * 2 + 0.2, r = 230 + (i % 3) * 25, s = 26 + (i % 4) * 9;
+      const f = facet(saltG, M(i % 2 ? 0xB4AEC8 : 0xA8A4C0), V(Math.cos(a) * r, -s * 0.8, Math.sin(a) * r), [s * 2.2, s, s * 1.2], [0, i, 0], 1); f.castShadow = false;
+    }
+    // ripples left by the wheels
+    for (let k = 0; k < 9; k++) { const m = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 32), new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.y = 0.012; saltG.add(m); sl.rings.push(m); }
+  }]);
+  const mat_cloudS = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, flatShading: true, roughness: 1, emissive: 0x3A4450, emissiveIntensity: 0.35 });
+  // an Andean chullo for the pelican: knitted stripes, ear flaps, a pompom
+  const saltGear = [];
+  (function () {
+    const g = new THREE.Group(); g.position.set(0.12, 2.42, 0); g.rotation.z = 0.2; headGrp.add(g); saltGear.push(g);
+    const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d');
+    ['#C8321E', '#F2C14E', '#2F7FC1', '#F4F1EA', '#3A9A5A', '#C8321E'].forEach((col, i) => { x.fillStyle = col; x.fillRect(0, i * 11, 128, 11); });
+    x.fillStyle = '#F4F1EA'; for (let k = 0; k < 16; k++) { x.beginPath(); x.moveTo(k * 8, 26); x.lineTo(k * 8 + 4, 20); x.lineTo(k * 8 + 8, 26); x.fill(); }
+    const knit = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c), roughness: 1, side: THREE.DoubleSide });
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), knit); cap.scale.y = 1.25; cap.castShadow = true; g.add(cap);
+    facet(g, M(0xC8321E, { roughness: 1 }), V(0, 0.22, 0), [0.05, 0.05, 0.05], null, 1);
+    [-1, 1].forEach(s => { feather(g, M(0xC8321E, { roughness: 1, side: THREE.DoubleSide }), V(-0.02, 0.0, s * 0.15), V(-0.15, -1, s * 0.12), V(0, 0, s), 0.13, 0.09); rod(g, V(-0.03, -0.12, s * 0.16), V(-0.04, -0.24, s * 0.17), 0.008, M(0xF2C14E)); });
+    g.visible = false;
+  })();
+  function updateSalt(t) {
+    const u = sl.ground.material.uniforms, th = t * SPEED / R_PATH;
+    u.time.value = t; u.bike.value = ((-th % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    sl.rings.forEach((m, k) => {   // a ring from each wheel every 0.4 s, spreading and fading
+      const age = (t % 0.4) + k * 0.4, a = -(t - age) * SPEED / R_PATH;
+      m.position.x = Math.cos(a) * R_PATH; m.position.z = Math.sin(a) * R_PATH;
+      m.scale.setScalar(0.15 + age * 0.55); m.material.opacity = Math.max(0, 0.35 * (1 - age / 3.6));
+    });
+    sl.flamingos.forEach(f => { f.nk.rotation.z = Math.sin(t * 0.4 + f.ph) > 0.6 ? -0.9 : 0.05 * Math.sin(t + f.ph); });
+  }
+  ENV.salt = { sky: uyuniTex, fog: 0xE6F0F8, near: 150, far: 520, sun: 0xFFFBF2, sunI: 1.15, hemi: 0.95, hemiSky: 0xDCEBFA, hemiGround: 0xC8D8E8 };
+
+  // ---------- the Shimanami Kaidō (しまなみ海道) — requested by Fable ----------
+  // A coastal road on a headland in the Seto Inland Sea: the blue cyclists' line on the tarmac, lemon terraces,
+  // white suspension bridges hopping from island to island, Onomichi on its hill across the water.
+  // At the viewpoint facing the bridges the pelican stops pedalling and coasts, and turns to look. A folded map sits in its pouch.
+  const shimaG = new THREE.Group(); shimaG.visible = false; scene.add(shimaG);
+  const sh = { sea: null, seaBase: null, ferry: null, wake: [], cat: null, BRIDGE: V(0, 9, -58) };
+  const setoTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#3E78BE'); gr.addColorStop(0.3, '#8DBBE0'); gr.addColorStop(0.45, '#E8E6D8'); gr.addColorStop(0.5, '#F4E6C6'); gr.addColorStop(1, '#F4E6C6');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  LAZY.push(['shima', function () {
+    // the sea, calm and a little green near the islands
+    const sg = new THREE.PlaneGeometry(520, 520, 90, 90); sg.rotateX(-Math.PI / 2); sh.seaBase = sg.attributes.position.array.slice();
+    sh.sea = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0x3C8CAA, flatShading: true, roughness: 0.45, metalness: 0.1 })); sh.sea.position.y = -1.3; sh.sea.receiveShadow = true; shimaG.add(sh.sea);
+    // the headland and its coastal road
+    const land = new THREE.Mesh(new THREE.CylinderGeometry(9.3, 10.8, 2.6, 56), M(0x7BA05A)); land.position.y = -1.3; land.receiveShadow = true; shimaG.add(land);
+    const flat = (geo, m, y) => { const o = new THREE.Mesh(geo, m); o.rotation.x = -Math.PI / 2; o.position.y = y; o.receiveShadow = true; shimaG.add(o); return o; };
+    flat(new THREE.RingGeometry(5.2, 6.8, 140, 1), M(0x5E626A), 0.012);
+    flat(new THREE.RingGeometry(5.26, 5.31, 140, 1), M(0xF4F1EA), 0.02);
+    flat(new THREE.RingGeometry(6.7, 6.75, 140, 1), M(0xF4F1EA), 0.02);
+    flat(new THREE.RingGeometry(6.46, 6.58, 180, 1), new THREE.MeshStandardMaterial({ color: 0x2E8FE0, emissive: 0x0E3A70, emissiveIntensity: 0.4, roughness: 0.6 }), 0.022);   // the blue line
+    // painted on the tarmac, now and then: 今治 and an arrow, in the same blue
+    const tc = document.createElement('canvas'); tc.width = 256; tc.height = 128; const tg = tc.getContext('2d');
+    tg.fillStyle = '#2E8FE0'; tg.textAlign = 'center'; tg.textBaseline = 'middle'; tg.font = '700 64px "Noto Sans CJK JP","Noto Sans CJK TC","PingFang TC","Hiragino Sans",sans-serif'; tg.fillText('今治', 92, 66);
+    tg.beginPath(); tg.moveTo(170, 40); tg.lineTo(236, 66); tg.lineTo(170, 92); tg.closePath(); tg.fill(); tg.fillRect(150, 56, 24, 20);
+    const textM = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(tc), transparent: true, depthWrite: false });
+    [0.3, 2.4, 4.5].forEach(a0 => { const a = -a0, m = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.65), textM); m.rotation.order = 'YXZ'; m.rotation.y = Math.PI / 2 - a; m.rotation.x = -Math.PI / 2; m.position.set(Math.cos(a) * 6.05, 0.024, Math.sin(a) * 6.05); shimaG.add(m); });
+    // a low sea wall on the outside of the road
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(7.1, 7.1, 0.5, 120, 1, true), M(0xDAD4C6, { side: THREE.DoubleSide })); wall.position.y = 0.25; wall.castShadow = true; shimaG.add(wall);
+    const cap = new THREE.Mesh(new THREE.TorusGeometry(7.1, 0.08, 4, 120), M(0xE8E2D4)); cap.rotation.x = Math.PI / 2; cap.position.y = 0.5; shimaG.add(cap);
+    for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = 9.8 + (i % 3) * 0.35; facet(shimaG, M(i % 2 ? 0x8E8A84 : 0x7A7670), V(Math.cos(a) * r, -1.15, Math.sin(a) * r), [0.7, 0.45, 0.6], [i, i, 0], 0); }
+    // lemon and mikan terraces in the middle
+    [[4.95, 0.3, 0x8A7A4A], [3.3, 0.62, 0x857648], [1.8, 0.92, 0x806F44]].forEach(([r, y, col]) => { const tr = new THREE.Mesh(new THREE.CylinderGeometry(r, r + 0.05, 0.32, 48), M(col)); tr.position.y = y - 0.16; tr.receiveShadow = true; shimaG.add(tr); const rim = new THREE.Mesh(new THREE.TorusGeometry(r, 0.07, 4, 48), M(0xB5AE9E)); rim.rotation.x = Math.PI / 2; rim.position.y = y; shimaG.add(rim); });
+    const leaf = [M(0x3E6B34), M(0x4A7A3A)];
+    function citrus(x, y, z, k) {
+      rod(shimaG, V(x, y, z), V(x, y + 0.35, z), 0.05, M(0x5A4636));
+      const f = facet(shimaG, leaf[k % 2], V(x, y + 0.62, z), [0.46, 0.36, 0.44], [0, k, 0], 1);
+      for (let j = 0; j < 6; j++) { const a = j * 1.1 + k, e = (j % 3) * 0.4 - 0.2; facet(shimaG, M(k % 3 ? 0xF2D23A : 0xF28C28, { roughness: 0.5 }), V(x + Math.cos(a) * Math.cos(e) * 0.42, y + 0.62 + Math.sin(e) * 0.33, z + Math.sin(a) * Math.cos(e) * 0.4), [0.06, 0.055, 0.06], null, 0); }
+    }
+    for (let i = 0; i < 13; i++) { const a = i / 13 * Math.PI * 2 + 0.2; citrus(Math.cos(a) * 4.2, 0.3, Math.sin(a) * 4.2, i); }
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.5; citrus(Math.cos(a) * 2.55, 0.62, Math.sin(a) * 2.55, i + 3); }
+    citrus(0, 0.92, 0, 5);
+    // a little sign on the top terrace
+    const sc = document.createElement('canvas'); sc.width = 256; sc.height = 96; const sx = sc.getContext('2d');
+    sx.fillStyle = '#F4F1EA'; sx.fillRect(0, 0, 256, 96); sx.fillStyle = '#2E8FE0'; sx.fillRect(0, 70, 256, 26);
+    sx.fillStyle = '#1C2A4A'; sx.textAlign = 'center'; sx.font = '700 36px "Noto Sans CJK JP","Noto Sans CJK TC","PingFang TC","Hiragino Sans",sans-serif'; sx.fillText('しまなみ海道', 128, 48);
+    sx.fillStyle = '#F4F1EA'; sx.font = '700 17px Georgia, serif'; sx.fillText('SHIMANAMI KAIDO', 128, 89);
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.45, 0.05), [M(0xDDD8CC), M(0xDDD8CC), M(0xDDD8CC), M(0xDDD8CC), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(sc) }), M(0xDDD8CC)]);
+    sign.position.set(Math.cos(-1.57) * 1.0, 1.9, Math.sin(-1.57) * 1.0 - 0.1); sign.rotation.y = Math.PI; shimaG.add(sign);
+    [-0.45, 0.45].forEach(dx => rod(shimaG, V(dx, 0.92, -1.1), V(dx, 1.7, -1.1), 0.03, M(0x8A8C90)));
+    // the bridges: three suspension spans in a row, all white, hopping over the strait
+    const brg = new THREE.Group(); brg.position.copy(sh.BRIDGE).setY(0); brg.rotation.y = 0.12; shimaG.add(brg);
+    const white = M(0xF2F3EF, { roughness: 0.6 }), DY = 7.5, TOP = 27, towers = [-78, -34, 10, 54], L = 116;
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(L * 2, 0.7, 2.8), white); deck.position.y = DY; deck.castShadow = true; brg.add(deck);
+    const girder = new THREE.Mesh(new THREE.BoxGeometry(L * 2, 0.9, 2.2), M(0xD8DAD6)); girder.position.y = DY - 0.75; brg.add(girder);
+    towers.forEach(x => {
+      [-1.7, 1.7].forEach(z => { const leg = new THREE.Mesh(new THREE.BoxGeometry(1.0, TOP + 1.3, 1.0), white); leg.position.set(x, (TOP - 1.3) / 2, z); leg.castShadow = true; brg.add(leg); });
+      [DY - 1.3, 16, TOP - 0.5].forEach(y => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 3.4), white); b.position.set(x, y, 0); brg.add(b); });
+      const pier = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.8, 1.6, 10), M(0xB8B4AA)); pier.position.set(x, -1.0, 0); brg.add(pier);
+    });
+    const cableM = M(0xE8EAE6), hangers = [];
+    const cable = (x0, y0, x1, y1, sag, z) => {
+      const pts = []; for (let k = 0; k <= 24; k++) { const u = k / 24; pts.push(V(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u - Math.sin(Math.PI * u) * sag, z)); }
+      brg.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.16, 5), cableM));
+      for (let x = x0 + 3; x < x1 - 1.5; x += 3) { const u = (x - x0) / (x1 - x0), y = y0 + (y1 - y0) * u - Math.sin(Math.PI * u) * sag; if (y > DY + 0.5) hangers.push(x, y, z, x, DY + 0.35, z); }
+    };
+    [-1.7, 1.7].forEach(z => {
+      cable(-L, DY + 0.4, towers[0], TOP, 3, z);
+      for (let i = 0; i < towers.length - 1; i++) cable(towers[i], TOP, towers[i + 1], TOP, TOP - DY - 1.6, z);
+      cable(towers[towers.length - 1], TOP, L, DY + 0.4, 3, z);
+    });
+    const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.Float32BufferAttribute(hangers, 3));
+    brg.add(new THREE.LineSegments(hg, new THREE.LineBasicMaterial({ color: 0xD8DCDE })));
+    // islands, rounded and green, fading into the haze
+    const greens = [M(0x5E8C45), M(0x6E9A4E), M(0x557F40), M(0x7AA25A)];
+    [[-L - 10, -58, 22, 14], [L + 12, -52, 24, 16]].forEach(([x, z, s, h], k) => facet(shimaG, greens[k], V(x, -h * 0.35, z), [s, h, s * 0.8], [0, k, 0], 1).castShadow = false);
+    for (let i = 0; i < 26; i++) {
+      const a = i * 2.39996 + 0.9, r = 34 + (i % 7) * 16, x = Math.cos(a) * r, z = Math.sin(a) * r;
+      if (Math.abs(z + 58) < 16 && Math.abs(x) < L + 30) continue;
+      const s = 7 + (i % 5) * 4, h = 5 + (i % 4) * 3.5;
+      facet(shimaG, greens[i % 4], V(x, -h * 0.3, z), [s, h, s * (0.7 + (i % 3) * 0.15)], [0, i, 0], 1).castShadow = false;
+    }
+    // Onomichi across the water: houses climbing a hill, a three-storey pagoda at the top
+    const ono = new THREE.Group(); ono.position.set(38, 0, 34); ono.rotation.y = -2.4; shimaG.add(ono);
+    facet(ono, M(0x6A9450), V(0, -3, 0), [18, 12, 10], null, 1).castShadow = false;
+    for (let i = 0; i < 34; i++) {
+      const x = -12 + (i * 7.3) % 24, z = 2 + (i % 4) * 1.6, hy = 8.2 * Math.sqrt(Math.max(0, 1 - (x / 18) ** 2)) - 3 - (z - 2) * 0.9;
+      const hs = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.0), M(i % 3 ? 0xF1ECE0 : 0xE8DCC4)); hs.position.set(x, hy + 0.3, z + 3); ono.add(hs);
+      const rf = new THREE.Mesh(new THREE.ConeGeometry(0.95, 0.5, 4), M(i % 2 ? 0x4A4E58 : 0x5E4A3E)); rf.rotation.y = Math.PI / 4; rf.position.set(x, hy + 1.0, z + 3); ono.add(rf);
+    }
+    const pg = new THREE.Group(); pg.position.set(-2, 8.6, 2.5); ono.add(pg);
+    for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(1.5 - k * 0.3, 0.8, 1.5 - k * 0.3), M(0x9C4A36)); b.position.y = k * 1.15 + 0.4; pg.add(b); const r = new THREE.Mesh(new THREE.ConeGeometry(1.45 - k * 0.25, 0.4, 4), M(0x3E3A36)); r.rotation.y = Math.PI / 4; r.position.y = k * 1.15 + 0.98; pg.add(r); }
+    rod(pg, V(0, 3.3, 0), V(0, 4.5, 0), 0.06, M(0xB08A3E));
+    // a small ferry crossing, and its wake
+    sh.ferry = new THREE.Group(); shimaG.add(sh.ferry);
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(5, 1.0, 1.8), M(0xF4F1EA)); hull.position.y = 0.3; sh.ferry.add(hull);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(5.02, 0.25, 1.82), M(0x2E6FB0)); stripe.position.y = 0.05; sh.ferry.add(stripe);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.9, 1.5), M(0xF4F1EA)); cab.position.set(-0.4, 1.2, 0); sh.ferry.add(cab);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(2.22, 0.3, 1.52), M(0x2E3A48)); win.position.set(-0.4, 1.3, 0); sh.ferry.add(win);
+    const fun = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.7, 8), M(0xC8453A)); fun.position.set(-0.9, 1.95, 0); sh.ferry.add(fun);
+    for (let k = 0; k < 14; k++) { const d = facet(shimaG, mat.cloud, V(), [0.3, 0.08, 0.3], null, 0); d.castShadow = false; sh.wake.push(d); }
+    // a cat sitting on the sea wall, watching the traffic
+    const cat = new THREE.Group(); const ca = 0.95; cat.position.set(Math.cos(ca) * 7.1, 0.56, Math.sin(ca) * 7.1); shimaG.add(cat);
+    const fur = M(0xE8A45A), fur2 = M(0xF4F1EA);
+    facet(cat, fur, V(0, 0.17, 0), [0.14, 0.18, 0.12], null, 1); facet(cat, fur2, V(0.07, 0.14, 0), [0.07, 0.12, 0.08], null, 1);
+    const hd = new THREE.Group(); hd.position.set(0.04, 0.38, 0); cat.add(hd); facet(hd, fur, V(0, 0, 0), [0.1, 0.09, 0.09], null, 1);
+    [-1, 1].forEach(s => { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 4), fur); ear.position.set(0, 0.09, s * 0.05); hd.add(ear); facet(hd, mat.eye, V(0.085, 0.015, s * 0.035), [0.012, 0.014, 0.01], null, 0); });
+    rod(cat, V(-0.1, 0.03, 0), V(-0.18, 0.02, 0.2), 0.02, fur);
+    sh.cat = { g: cat, hd };
+  }]);
+  // a folded paper map, tucked into the pouch
+  const shimaGear = [];
+  (function () {
+    const g = new THREE.Group(); g.position.set(0.3, -0.06, 0.035); g.rotation.set(0.15, 0, 1.05); beakGrp.add(g); shimaGear.push(g);
+    const c = document.createElement('canvas'); c.width = 192; c.height = 128; const x = c.getContext('2d');
+    x.fillStyle = '#BFE0EE'; x.fillRect(0, 0, 192, 128);
+    [[40, 30, 26, 18], [100, 70, 34, 22], [160, 40, 20, 16], [60, 100, 22, 14], [150, 105, 18, 12]].forEach(([cx, cy, rx, ry]) => { x.fillStyle = '#9CCB7A'; x.beginPath(); x.ellipse(cx, cy, rx, ry, 0.4, 0, 7); x.fill(); });
+    x.strokeStyle = '#2E8FE0'; x.lineWidth = 4; x.setLineDash([8, 5]); x.beginPath(); x.moveTo(40, 30); x.lineTo(100, 70); x.lineTo(150, 105); x.stroke();
+    x.setLineDash([]); x.fillStyle = '#C8321E'; [[40, 30], [150, 105]].forEach(([px, py]) => { x.beginPath(); x.arc(px, py, 6, 0, 7); x.fill(); });
+    x.strokeStyle = 'rgba(0,0,0,0.15)'; x.lineWidth = 2; [64, 128].forEach(px => { x.beginPath(); x.moveTo(px, 0); x.lineTo(px, 128); x.stroke(); });
+    const tex = new THREE.CanvasTexture(c);
+    for (let k = 0; k < 3; k++) {   // three panels, folded like an accordion
+      const geo = new THREE.PlaneGeometry(0.11, 0.2); const uv = geo.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setX(i, (k + uv.getX(i)) / 3);
+      const p = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.9 }));
+      p.position.set(k * 0.1, 0.1, k % 2 ? 0.02 : 0); p.rotation.y = k % 2 ? 0.45 : -0.45; g.add(p);
+    }
+    g.visible = false;
+  })();
+  const SH_LAP = Math.PI * 2 * R_PATH / 1.8, SH_C0 = SH_LAP * 0.25 - 1.6, SH_CW = 3.4;   // the coast: around the point nearest the bridges
+  function shimaCoast(t) { const u = ((t % SH_LAP) + SH_LAP) % SH_LAP; return { u, k: sm(u, SH_C0, SH_C0 + 0.8) * (1 - sm(u, SH_C0 + SH_CW - 0.8, SH_C0 + SH_CW)), coasted: Math.floor(t / SH_LAP) * SH_CW + Math.min(SH_CW, Math.max(0, u - SH_C0)) }; }
+  const _sv = new THREE.Vector3();
+  function updateShima(t) {
+    const p = sh.sea.geometry.attributes.position.array, b = sh.seaBase;
+    for (let i = 0; i < p.length; i += 3) p[i + 1] = Math.sin(b[i] * 0.3 + t * 0.8) * 0.08 + Math.cos(b[i + 2] * 0.25 - t * 0.7) * 0.08;
+    sh.sea.geometry.attributes.position.needsUpdate = true; sh.sea.geometry.computeVertexNormals();
+    // the ferry, back and forth across the strait
+    const FT = 60, fu = (t % FT) / FT, dir = fu < 0.5 ? 1 : -1, q = fu < 0.5 ? fu * 2 : (1 - fu) * 2;
+    const fx = -70 + q * 140, fz = 24 + Math.sin(q * Math.PI) * 6;
+    sh.ferry.position.set(fx, -1.25 + Math.sin(t * 1.3) * 0.05, fz); sh.ferry.rotation.y = dir > 0 ? 0 : Math.PI;
+    sh.wake.forEach((d, k) => { d.position.set(fx - dir * (3 + k * 1.3), -1.2, fz + ((k % 2) - 0.5) * (0.4 + k * 0.12)); d.scale.setScalar(1 + k * 0.12); });
+    // the pelican: coasting at the viewpoint, head turned toward the bridges
+    const c = shimaCoast(t);
+    if (c.k > 0.001) {
+      rider.updateMatrixWorld(true); _sv.copy(sh.BRIDGE); rider.worldToLocal(_sv);
+      const yaw = Math.max(-1.1, Math.min(1.1, Math.atan2(-_sv.z, _sv.x)));
+      headGrp.rotation.y = headGrp.rotation.y * (1 - c.k) + yaw * c.k;
+    }
+    // the cat keeps an eye on the pelican
+    sh.cat.g.rotation.y = -0.95 + Math.PI; const ra = Math.atan2(rider.position.z, rider.position.x);
+    let d = ra - 0.95; d = Math.atan2(Math.sin(d), Math.cos(d)); sh.cat.hd.rotation.y = Math.max(-1, Math.min(1, -d * 1.5)) + (Math.abs(d) > 0.8 ? Math.sin(t * 0.5) * 0.3 : 0);
+  }
+  ENV.shima = { sky: setoTex, fog: 0xE6E2D2, near: 60, far: 300, sun: 0xFFE6C0, sunI: 1.15, hemi: 0.8, hemiSky: 0xDCEAF5, hemiGround: 0x7A8A5A };
+  // render helper: on the mirror scenes (tidal flat, salt flat), draw the upside-down world into the mirror texture first
   const _rs = new THREE.Vector2();
+  td.g = tideG; const MIRRORS = [td, sl];
   function renderFrame() {
-    if (tideG.visible && td.rt) {
+    for (const mr of MIRRORS) {
+      if (!mr.g.visible || !mr.rt) continue;
       renderer.getDrawingBufferSize(_rs);
       const w = Math.max(2, Math.floor(_rs.x / 2)), h = Math.max(2, Math.floor(_rs.y / 2));
-      if (td.rt.width !== w || td.rt.height !== h) td.rt.setSize(w, h);
-      td.ground.material.uniforms.res.value.copy(_rs);
-      td.ground.visible = false; scene.scale.y = -1;
-      renderer.setRenderTarget(td.rt); renderer.render(scene, camera);
-      renderer.setRenderTarget(null); scene.scale.y = 1; td.ground.visible = true;
+      if (mr.rt.width !== w || mr.rt.height !== h) mr.rt.setSize(w, h);
+      mr.ground.material.uniforms.res.value.copy(_rs);
+      mr.ground.visible = false; scene.scale.y = -1;
+      renderer.setRenderTarget(mr.rt); renderer.render(scene, camera);
+      renderer.setRenderTarget(null); scene.scale.y = 1; mr.ground.visible = true;
     }
     renderer.render(scene, camera);
   }
@@ -3907,6 +4166,8 @@
     nightIslandG.visible = name === 'homecoming';
     veniceG.visible = name === 'venice'; veniceGear.forEach(o => { o.visible = name === 'venice'; });
     tideG.visible = name === 'tide';
+    saltG.visible = name === 'salt'; saltGear.forEach(o => { o.visible = name === 'salt'; });
+    shimaG.visible = name === 'shima'; shimaGear.forEach(o => { o.visible = name === 'shima'; });
     rabbitG.visible = name === 'rabbit'; rabbitGear.forEach(o => { o.visible = name === 'rabbit'; }); rider.scale.setScalar(1);
     school.visible = name === 'school';
     market.visible = night.visible = basket.visible = name === 'market';
@@ -3928,11 +4189,11 @@
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit', isTide = name === 'tide';
-    setEnv(isTide ? ENV.tide : isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isRabbit && !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit', isTide = name === 'tide', isSalt = name === 'salt', isShima = name === 'shima';
+    setEnv(isSalt ? ENV.salt : isShima ? ENV.shima : isTide ? ENV.tide : isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isSalt && !isShima && !isRabbit && !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
     clouds.forEach(c => { c.visible = !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
-    gulls.forEach(q => { q.g.visible = !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
+    gulls.forEach(q => { q.g.visible = !isSalt && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -3949,7 +4210,7 @@
     lean.rotation.x = -0.07;
     lean.position.y = Math.abs(Math.sin(dist * 3.1)) * 0.004;
     const wr = -dist / WR; rearWheel.rotation.z = wr; frontWheel.rotation.z = wr;
-    const ca = -dist / WR * 0.55;
+    const ca = -(sceneName === 'shima' ? dist - SPEED * shimaCoast(t).coasted : dist) / WR * 0.55;   // on the Shimanami road the pedals rest while it coasts
     [0, 1].forEach(i => {
       const a = ca + i * Math.PI, side = i === 0 ? 0.16 : -0.16;
       const pp = V(BB.x + Math.cos(a) * CRANK, BB.y + Math.sin(a) * CRANK, side);
@@ -3971,7 +4232,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else if (sceneName === 'tide') updateTide(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else if (sceneName === 'tide') updateTide(t); else if (sceneName === 'salt') updateSalt(t); else if (sceneName === 'shima') updateShima(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -4002,6 +4263,10 @@
     } else {
       tmp.set(Math.cos(psi) * dist, h, Math.sin(psi) * dist);
       rider.localToWorld(tmp);
+      if (sceneName === 'shima') {   // stay on the sea side of the road, looking in over the terraces
+        const cr = Math.hypot(tmp.x, tmp.z), want = Math.min(11, cr < R_PATH + 0.8 ? 2 * R_PATH - cr + 1.6 : cr), k = want / (cr || 1);
+        tmp.x *= k; tmp.z *= k; tmp.y = Math.max(tmp.y, 1.0);
+      }
       if (sceneName === 'venice') {   // stay on the campo: never out over the canal, the bridges or into the palazzi
         const cr = Math.hypot(tmp.x, tmp.z), want = cr > R_PATH ? Math.max(3.4, R_PATH - (cr - R_PATH)) : Math.max(3.4, cr), k = want / (cr || 1);   // mirror outside shots to the inside
         tmp.x *= k; tmp.z *= k;
@@ -4045,13 +4310,13 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞', tide: '場景：潮間帶', bts: '花絮' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞', salt: '場景：天空之鏡', shima: '場景：島波海道', tide: '場景：潮間帶', bts: '花絮' };
   function applyScene(name) {
     if (name === 'bts' && audio && !audio.paused) btnMusic.onclick();   // the reel has no theme music
     setScene(name, t); btnScene.textContent = SCENE_LABEL[name];
   }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'tide', 'homecoming', 'bts'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'salt', 'shima', 'tide', 'homecoming', 'bts'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
@@ -4115,7 +4380,7 @@
     if (!ba.on) { ba.waves.gain.value = 0; ba.wind.gain.value = 0; ba.pg.gain.value = 0; if (ba.phraseOn) { ba.phraseOn = false; ba.el.pause(); } }
   };
   btnOut.onclick = () => { applyScene('island'); try { history.replaceState(null, '', '#island'); } catch (e) {} };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#salt', '#shima', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
   controls.addEventListener('start', () => { if (auto) { auto = false; controls.target.copy(focus); syncUI(); } });
   syncUI();
 

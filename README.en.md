@@ -8,7 +8,7 @@ A paper-cut style golden pelican rides a red bicycle around the world (and the M
 
 **🎬 97-second tour video:** https://crystal32378.github.io/golden-pelican/golden-pelican-tour.mp4
 
-## Twenty-three scenes
+## Twenty-five scenes
 
 Use the **場景** (Scene) button in the bottom-left corner to move to the next stop. The on-screen labels are in Traditional Chinese; so are the signs at the night market and the price boards at the wet market, because that is what they say in real life.
 
@@ -35,16 +35,18 @@ Use the **場景** (Scene) button in the bottom-left corner to move to the next 
 | Botanical garden | A white iron-and-glass conservatory, a round bed of desert cacti in the middle, tulips, hydrangeas, lavender and daisies around it, falling cherry petals, butterflies and bees. The pelican wears a flower crown |
 | Venice | Requested by GPT Sol. A paved square ringed by a canal, four arched bridges, pastel palazzi with gothic windows and laundry lines, gondolas with striped-shirt gondoliers. Pigeons peck at the ground and burst into the air as the pelican rides by. It wears a gondolier's straw hat with a red ribbon. (Cycling is actually banned in historic Venice. The pigeons are keeping it quiet.) |
 | Rabbit hole | Requested by Space Bunny. Riding down the rabbit hole: the walls keep rushing upward (we are the ones falling), past shelves of orange marmalade, maps and clocks, while teacups, playing cards, pocket watches, books and a little red armchair float up alongside. The track is a black-and-white checkerboard round a giant pocket watch whose hands run backwards, with a golden key and a bottle marked DRINK ME on a glass table. The White Rabbit runs ahead, forever checking his watch. The pelican wears a top hat with a 10/6 price card, and every 18 seconds it shrinks for a moment and grows back |
+| Sky mirror | Requested by Astra. The Salar de Uyuni in Bolivia after rain: a few centimetres of water turn the whole salt flat into a mirror, so the sky is above and below. Low cumulus ring the horizon, pink flamingos stand on one leg in the distance, rows of salt mounds wait to be collected, and where the flat has dried out the hexagonal salt crust shows. As the pelican rides, its wheels leave ripples in the water and gently wrinkle the white cloud under its feet. It wears a colourful Andean chullo |
+| Shimanami Kaidō | Requested by Fable. The cycling road across the Seto Inland Sea in Japan, from Onomichi to Imabari. A blue line painted on the tarmac for cyclists, with 今治 (Imabari) and an arrow now and then; terraces of lemons and mikan on the slope; white suspension bridges hopping from island to island; Onomichi's houses climbing the hill across the water with a three-storey pagoda on top; a ferry going back and forth; a cat sitting on the sea wall, watching the road. Where the road faces the bridges, the pelican stops pedalling, coasts for a moment and turns its head to look. There is a folded map in its pouch |
 | Tidal flat | Requested by GLM 5.3 Flash. The sandbar at low tide, with the sunset turning the water and the sky the same colour. The wet sand is a mirror, so the pelican and the red bicycle each have a reflection. Paper boats lean on the mud, old mooring stakes march out to sea, little crabs scuttle sideways. On the horizon is the lighthouse island: the next stop is home. (Something may be hidden here, but the pelican does nothing and doesn't even glance at it.) |
 | Homecoming | The last stop. Back to the lighthouse island where it all started, now at night: the lighthouse beam sweeping the sea, stars and a path of moonlight, blue bioluminescent plankton flashing where the waves reach the shore, the occasional shooting star. A warm light at the lighthouse door, and two pelican friends waiting. It wears nothing at all, just like the day it left |
 
-Drag to orbit, scroll to zoom. You can also open a scene directly by URL, for example `#moon`, `#paris`, `#venice` or `#rabbit`.
+Drag to orbit, scroll to zoom. You can also open a scene directly by URL, for example `#moon`, `#paris`, `#venice`, `#rabbit` or `#salt`.
 
 After the last stop, Homecoming, press the Scene button once more.
 
 ## How it started
 
-When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a Three.js pelican riding a bicycle. (Drawing a pelican on a bicycle has become a running test for new AI models.) We started from there and took this pelican somewhere new, one stop at a time. Along the way, other AIs joined the trip and picked destinations: muse chose the wet market, Kimi (Moonshot AI) chose the library, GPT Sol chose Venice, Space Bunny chose the rabbit hole, and GLM 5.3 Flash chose the tidal flat.
+When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a Three.js pelican riding a bicycle. (Drawing a pelican on a bicycle has become a running test for new AI models.) We started from there and took this pelican somewhere new, one stop at a time. Along the way, other AIs joined the trip and picked destinations: muse chose the wet market, Kimi (Moonshot AI) chose the library, GPT Sol chose Venice, Space Bunny chose the rabbit hole, GLM 5.3 Flash chose the tidal flat, Astra chose the sky mirror, and Fable chose the Shimanami Kaidō.
 
 - Idea and direction: Crystal
 - Modelling and code: Claude (Anthropic)
