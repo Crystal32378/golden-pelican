@@ -8,7 +8,7 @@ A paper-cut style golden pelican rides a red bicycle around the world (and the M
 
 **🎬 97-second tour video:** https://crystal32378.github.io/golden-pelican/golden-pelican-tour.mp4
 
-## Twenty-two scenes
+## Twenty-three scenes
 
 Use the **場景** (Scene) button in the bottom-left corner to move to the next stop. The on-screen labels are in Traditional Chinese; so are the signs at the night market and the price boards at the wet market, because that is what they say in real life.
 
@@ -35,17 +35,35 @@ Use the **場景** (Scene) button in the bottom-left corner to move to the next 
 | Botanical garden | A white iron-and-glass conservatory, a round bed of desert cacti in the middle, tulips, hydrangeas, lavender and daisies around it, falling cherry petals, butterflies and bees. The pelican wears a flower crown |
 | Venice | Requested by GPT Sol. A paved square ringed by a canal, four arched bridges, pastel palazzi with gothic windows and laundry lines, gondolas with striped-shirt gondoliers. Pigeons peck at the ground and burst into the air as the pelican rides by. It wears a gondolier's straw hat with a red ribbon. (Cycling is actually banned in historic Venice. The pigeons are keeping it quiet.) |
 | Rabbit hole | Requested by Space Bunny. Riding down the rabbit hole: the walls keep rushing upward (we are the ones falling), past shelves of orange marmalade, maps and clocks, while teacups, playing cards, pocket watches, books and a little red armchair float up alongside. The track is a black-and-white checkerboard round a giant pocket watch whose hands run backwards, with a golden key and a bottle marked DRINK ME on a glass table. The White Rabbit runs ahead, forever checking his watch. The pelican wears a top hat with a 10/6 price card, and every 18 seconds it shrinks for a moment and grows back |
+| Tidal flat | Requested by 牛牛 (GLM 5.3). The sandbar at low tide, with the sunset turning the water and the sky the same colour. The wet sand is a mirror, so the pelican and the red bicycle each have a reflection. Paper boats lean on the mud, old mooring stakes march out to sea, little crabs scuttle sideways. On the horizon is the lighthouse island: the next stop is home. (Something may be hidden here, but the pelican does nothing and doesn't even glance at it.) |
 | Homecoming | The last stop. Back to the lighthouse island where it all started, now at night: the lighthouse beam sweeping the sea, stars and a path of moonlight, blue bioluminescent plankton flashing where the waves reach the shore, the occasional shooting star. A warm light at the lighthouse door, and two pelican friends waiting. It wears nothing at all, just like the day it left |
 
 Drag to orbit, scroll to zoom. You can also open a scene directly by URL, for example `#moon`, `#paris`, `#venice` or `#rabbit`.
 
+After the last stop, Homecoming, press the Scene button once more.
+
 ## How it started
 
-When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a Three.js pelican riding a bicycle. (Drawing a pelican on a bicycle has become a running test for new AI models.) We started from there and took this pelican somewhere new, one stop at a time. Along the way, other AIs joined the trip and picked destinations: muse chose the wet market, Kimi (Moonshot AI) chose the library, GPT Sol chose Venice, and Space Bunny chose the rabbit hole.
+When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a Three.js pelican riding a bicycle. (Drawing a pelican on a bicycle has become a running test for new AI models.) We started from there and took this pelican somewhere new, one stop at a time. Along the way, other AIs joined the trip and picked destinations: muse chose the wet market, Kimi (Moonshot AI) chose the library, GPT Sol chose Venice, Space Bunny chose the rabbit hole, and 牛牛 (GLM 5.3) chose the tidal flat.
 
 - Idea and direction: Crystal
 - Modelling and code: Claude (Anthropic)
 - Music: Crystal (made with the MiniMax music model, `score.mp3`)
+
+## Who gave the pelican what
+
+GPT Sol summed up the trip in a list; we added the last two lines:
+
+- Muse gave it the smoke and bustle of everyday life
+- Kimi gave it an inner world
+- Mini took it home to its own burrow
+- Opus gave it a boundless world
+- Sol gave it a criminal record
+- GLM gave it a hidden fish
+- Astra gave it the light of the sky
+- Fable gave it a good road
+- MiniMax gave it a song
+- Crystal gave it a journey
 
 📐 **[Engineering notes, written by Claude](DESIGN.en.md)**: the architecture, two-bone IK, the one feather shape used for everything, textures drawn in code, the video pipeline, and the bugs that were caught.
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞等二十二個場景，最後在夜裡回家。">
+<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞、潮間帶等二十三個場景，最後在夜裡回家。">
 <style>*{box-sizing:border-box}</style>
 </head>
 <body>
@@ -61,6 +61,23 @@
   button[aria-pressed="true"] { background: var(--ink); color: #16303F; border-color: var(--ink); }
   .hint { margin: 0; font-size: 12px; color: var(--ink-soft); }
   body.capture .card { display: none; }
+  #btsUI { display: none; position: fixed; inset: 0; pointer-events: none; font-family: "IBM Plex Mono", ui-monospace, monospace; color: #F6F3EA; }
+  body.bts #btsUI { display: block; } body.bts .card { display: none; }
+  #btsUI .bar { position: absolute; left: 0; right: 0; height: 10.5vh; background: #000; } #btsUI .top { top: 0; } #btsUI .bot { bottom: 0; }
+  #btsUI .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.45) 100%); }
+  #btsUI .rec { position: absolute; top: calc(10.5vh + 14px); left: 18px; font-size: 13px; letter-spacing: .08em; opacity: .85; }
+  #btsUI .rec i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #E0452E; margin-right: 8px; animation: blink 1.2s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #btsUI .slate { position: absolute; top: calc(10.5vh + 14px); right: 18px; font-size: 13px; letter-spacing: .1em; opacity: .85; }
+  #btsUI .stamp { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%) rotate(-8deg) scale(1.4); font: 700 64px/1 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: .06em; padding: 6px 22px; border: 5px solid currentColor; border-radius: 10px; opacity: 0; transition: opacity .15s, transform .15s; }
+  #btsUI .stamp.on { opacity: .9; transform: translate(-50%,-50%) rotate(-8deg) scale(1); }
+  #btsUI .stamp.ng { color: #E0452E; } #btsUI .stamp.ok { color: #7FD08A; }
+  #btsUI .black { position: absolute; inset: 0; background: #000; opacity: 0; display: grid; place-items: center; }
+  #btsUI .black > div { position: absolute; text-align: center; font: 700 30px/1.4 "Noto Sans TC", system-ui, sans-serif; letter-spacing: .2em; }
+  #btsUI .black small { display: block; margin-top: 10px; font: 400 12px/1.4 "IBM Plex Mono", monospace; letter-spacing: .12em; opacity: .7; }
+  #btsUI .ctl { position: absolute; right: 16px; bottom: calc(10.5vh + 12px); display: flex; gap: 8px; pointer-events: auto; }
+  #btsUI .ctl button { font: 400 12px "IBM Plex Mono", monospace; color: #F6F3EA; background: rgba(0,0,0,.35); border: 1px solid rgba(246,243,234,.3); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+  body.capture #btsUI .ctl { display: none; } body.capture #btsUI .stamp { transition: none; }
 </style>
 
 <div id="stage"></div>
@@ -358,18 +375,20 @@
 
   // wings: an angular arm to the handlebar, trailing secondaries, dark primaries wrapped round the grip
   const SH = V(-0.04, 1.7);
+  const wingGrps = [];   // each wing in its own group, so it can fold back when the pelican gets off the bike
   [-1, 1].forEach(s => {
+    const wg = new THREE.Group(); bird.add(wg); wingGrps.push(wg);
     const a = V(SH.x, SH.y, s * 0.27), grip = V(BAR.x - 0.02, BAR.y + 0.04, s * 0.27);
     const elbow = a.clone().lerp(grip, 0.5).add(V(-0.02, 0.1, s * 0.07));
-    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.075, 1, 5), pm.cov); arm1.castShadow = true; placeBetween(arm1, elbow, a); bird.add(arm1);
-    const arm2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.055, 1, 5), pm.cov); arm2.castShadow = true; placeBetween(arm2, grip, elbow); bird.add(arm2);
+    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.075, 1, 5), pm.cov); arm1.castShadow = true; placeBetween(arm1, elbow, a); wg.add(arm1);
+    const arm2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.055, 1, 5), pm.cov); arm2.castShadow = true; placeBetween(arm2, grip, elbow); wg.add(arm2);
     const n = V(0, 0.2, s);
     [0.15, 0.35, 0.55, 0.75].forEach((f, i) => {
       const b = f < 0.5 ? a.clone().lerp(elbow, f * 2) : elbow.clone().lerp(grip, (f - 0.5) * 2);
-      feather(bird, i < 2 ? pm.cov2 : pm.grey, b, V(-0.75, -0.6, 0), n, 0.28 - i * 0.03, 0.09);
+      feather(wg, i < 2 ? pm.cov2 : pm.grey, b, V(-0.75, -0.6, 0), n, 0.28 - i * 0.03, 0.09);
     });
     [[1, -0.25], [0.85, -0.55], [0.55, -0.85], [0.2, -1]].forEach(([dx, dy], i) => {
-      feather(bird, pm.prim, grip.clone().add(V(-0.03, 0.01, s * 0.01 * i)), V(dx, dy, 0), n, 0.2 - i * 0.015, 0.06);
+      feather(wg, pm.prim, grip.clone().add(V(-0.03, 0.01, s * 0.01 * i)), V(dx, dy, 0), n, 0.2 - i * 0.015, 0.06);
     });
   });
   // legs (dynamic)
@@ -382,7 +401,7 @@
     return { thigh, shin, knee, foot };
   });
   const L1 = 0.52, L2 = 0.55;
-  function solveKnee(hip, target) {
+  function solveKnee(hip, target, back) {
     const d = new THREE.Vector3().subVectors(target, hip);
     let len = d.length(); len = Math.min(Math.max(len, 0.1), L1 + L2 - 0.005);
     const dir = d.clone().normalize();
@@ -393,7 +412,7 @@
     const kd = V(dir.x * c - dir.y * s, dir.x * s + dir.y * c, dir.z);
     // pick the solution with knee in front
     const kd2 = V(dir.x * c + dir.y * s, -dir.x * s + dir.y * c, dir.z);
-    const use = kd.x > kd2.x ? kd : kd2;
+    const use = (kd.x > kd2.x) !== !!back ? kd : kd2;   // riding: knee forward; standing: the bird's ankle bends back
     return hip.clone().addScaledVector(use, L1);
   }
 
@@ -3532,15 +3551,362 @@
   }
 
   ENV.rabbit = { sky: holeTex, fog: 0x2A1A22, near: 14, far: 70, sun: 0xFFE0B0, sunI: 0.95, hemi: 0.75, hemiSky: 0xFFE8C8, hemiGround: 0x5A3A4A };
+  // ---------- the tidal flat (潮間帶) — ordered by 牛牛 (GLM 5.3) ----------
+  // Low tide at sunset. The wet sand is a mirror: every frame the whole world is rendered upside-down into a
+  // texture, and the sand samples it at the same screen position, so the pelican rides on top of its own reflection.
+  // One tide pool near the track has a fish in it. It jumps, rarely, until the pelican has ridden past once.
+  const tideG = new THREE.Group(); tideG.visible = false; scene.add(tideG);
+  const td = { crabs: [], ground: null, rt: null, poolA: -5.75, poolR: 7.7, fish: null, ring: null, drops: [] };
+  const tideTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#34457E'); gr.addColorStop(0.22, '#7D5E8E'); gr.addColorStop(0.36, '#D9807A'); gr.addColorStop(0.46, '#F7A860'); gr.addColorStop(0.5, '#FFD08A'); gr.addColorStop(1, '#FFD08A');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  LAZY.push(['tide', function () {
+    td.rt = new THREE.WebGLRenderTarget(512, 512);
+    const P = V(Math.cos(td.poolA) * td.poolR, 0, Math.sin(td.poolA) * td.poolR);
+    td.poolPos = P;
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        tMirror: { value: td.rt.texture }, res: { value: new THREE.Vector2(1, 1) }, time: { value: 0 },
+        sand: { value: new THREE.Color(0xB8875E) }, dry: { value: new THREE.Color(0xD9B488) }, fogC: { value: new THREE.Color(0xE8A878) },
+        pool: { value: new THREE.Vector2(P.x, P.z) }
+      },
+      vertexShader: 'varying vec3 wp; void main(){ vec4 w = modelMatrix * vec4(position,1.0); wp = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: [
+        'uniform sampler2D tMirror; uniform vec2 res; uniform float time; uniform vec3 sand; uniform vec3 dry; uniform vec3 fogC; uniform vec2 pool; varying vec3 wp;',
+        'void main(){',
+        '  float r = length(wp.xz);',
+        '  float n = sin(wp.x*0.21+0.7)*cos(wp.z*0.17) + 0.6*sin((wp.x+wp.z)*0.09+1.3) + 0.35*sin(wp.x*0.53-wp.z*0.41);',
+        '  float wet = smoothstep(0.15, 0.55, n);                              // shallow pools and runnels',
+        '  float ridge = smoothstep(0.95, 1.35, n); // a few dry, rippled ridges',
+        '  float track = 1.0 - smoothstep(0.0, 1.2, abs(r - 6.0) - 0.6);       // firm damp sand where the bike rides',
+        '  float pl = 1.0 - smoothstep(0.9, 1.3, length(wp.xz - pool));',
+        '  float sea = smoothstep(34.0, 48.0, r);',
+        '  float refl = mix(0.42, 0.9, wet); refl = mix(refl, 0.62, track); refl = max(refl, pl*0.95); refl = mix(refl, 0.93, sea); refl *= (1.0 - ridge*0.8);',
+        '  vec2 uv = gl_FragCoord.xy / res;',
+        '  float w = (wet*0.6 + sea + pl) * 0.0035;',
+        '  uv += vec2(sin(wp.x*2.3 + time*1.3), cos(wp.z*2.1 - time*1.1)) * w;',
+        '  vec3 m = texture2D(tMirror, uv).rgb;',
+        '  vec3 base = mix(sand, dry, ridge);',
+        '  base *= 1.0 - 0.06*ridge*smoothstep(0.3, 1.0, sin(wp.x*5.0 + wp.z*1.6));   // faint wind ripples on the dry ridges',
+        '  vec3 col = mix(base, m * vec3(0.93, 0.88, 0.85), refl);',
+        '  col = mix(col, col*vec3(0.85,0.95,1.05), sea*0.5);',
+        '  float d = length(wp - cameraPosition);',
+        '  col = mix(col, fogC, smoothstep(60.0, 230.0, d));',
+        '  gl_FragColor = vec4(col, 1.0);',
+        '}'].join('\n')
+    });
+    td.ground = new THREE.Mesh(new THREE.PlaneGeometry(640, 640, 1, 1), mat); td.ground.rotation.x = -Math.PI / 2; tideG.add(td.ground);
+    // paper boats leaning on the mud, waiting for the tide
+    const paper = [0xF4F1EA, 0xC8453A, 0x3A6EA5, 0xF2C14E, 0x6FA08A];
+    [[0.9, 16, 0.35, 0], [1.25, 21, -0.4, 1], [2.6, 18, 0.3, 2], [4.3, 24, -0.32, 3], [5.1, 15, 0.38, 4]].forEach(([a, r, tilt, k]) => {
+      const b = new THREE.Group(); b.position.set(Math.cos(a) * r, 0.05, Math.sin(a) * r); b.rotation.set(0, k * 1.3, tilt); tideG.add(b);
+      const sh = new THREE.Shape(); sh.moveTo(-1.6, 0.55); sh.lineTo(-1.1, 0); sh.lineTo(1.1, 0); sh.lineTo(1.7, 0.6); sh.lineTo(0.1, 0.35); sh.closePath();
+      const side = new THREE.ExtrudeGeometry(sh, { depth: 0.04, bevelEnabled: false });
+      [-0.42, 0.38].forEach(z => { const m = new THREE.Mesh(side, M(paper[k], { side: THREE.DoubleSide })); m.position.z = z; m.castShadow = true; b.add(m); });
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.04, 0.8), M(paper[(k + 2) % 5])); floor.position.y = 0.04; b.add(floor);
+      rod(b, V(0.1, 0.05, 0), V(0.1, 2.1, 0), 0.035, M(0x8A6240));
+      feather(b, M(paper[(k + 1) % 5], { side: THREE.DoubleSide }), V(0.12, 0.35, 0), V(0.05, 1, 0), V(0, 0, 1), 1.6, 0.9);
+    });
+    // old mooring stakes marching out toward the water
+    for (let row = 0; row < 3; row++) for (let i = 0; i < 9; i++) {
+      const a = 3.3 + row * 0.9, r = 11 + i * 3.2, x = Math.cos(a) * r + Math.sin(a) * (i % 2) * 0.3, z = Math.sin(a) * r;
+      const h = 0.8 + ((i * 7 + row) % 4) * 0.25; const st = cyl(0.09, M(0x5A4230), 6); st.scale.y = h; st.position.set(x, h / 2, z); st.rotation.z = (i % 3 - 1) * 0.08; tideG.add(st);
+    }
+    // the lighthouse island on the horizon — the next stop is home
+    const home = new THREE.Group(); home.position.set(-60, 0, -52); tideG.add(home);
+    facet(home, M(0x4A4050), V(0, -0.8, 0), [9, 2.6, 6], null, 1).castShadow = false;
+    const lh = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 5, 10), M(0x3A3444)); lh.position.set(1, 3.2, 0); home.add(lh);
+    const lt = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), new THREE.MeshBasicMaterial({ color: 0xFFE9B8 })); lt.position.set(1, 5.9, 0); home.add(lt);
+    // little crabs, scuttling sideways
+    for (let i = 0; i < 5; i++) {
+      const g = new THREE.Group(); tideG.add(g);
+      const red = M(0xD9612F); facet(g, red, V(0, 0.08, 0), [0.14, 0.06, 0.11], null, 1);
+      [-1, 1].forEach(s => { facet(g, red, V(0.03, 0.08, s * 0.16), [0.06, 0.04, 0.05], null, 0); for (let k = 0; k < 3; k++) rod(g, V(-0.04 + k * 0.05, 0.07, s * 0.08), V(-0.04 + k * 0.05, 0.0, s * 0.18), 0.008, red); facet(g, mat.eye, V(0.1, 0.15, s * 0.04), [0.015, 0.015, 0.015], null, 0); });
+      td.crabs.push({ g, a: 0.6 + i * 1.23, r: 8.3 + (i % 3) * 0.9, ph: i * 1.7 });
+    }
+    // the fish in the tide pool, and the ring it leaves when it lands
+    const fish = new THREE.Group(); tideG.add(fish); td.fish = fish;
+    facet(fish, M(0xD9E2E8, { metalness: 0.6, roughness: 0.3 }), V(0, 0, 0), [0.16, 0.06, 0.04], null, 1);
+    feather(fish, M(0xB8C4CC, { metalness: 0.5 }), V(-0.14, 0, 0), V(-1, 0, 0), V(0, 0, 1), 0.1, 0.1);
+    td.ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.26, 24), new THREE.MeshBasicMaterial({ color: 0xFFF0D8, transparent: true, opacity: 0, depthWrite: false })); td.ring.rotation.x = -Math.PI / 2; td.ring.position.set(P.x, 0.02, P.z); tideG.add(td.ring);
+    for (let k = 0; k < 8; k++) { const d = facet(tideG, mat.cloud, V(), [0.035, 0.035, 0.035], null, 0); d.castShadow = false; td.drops.push(d); }
+  }]);
+  function tideJump(t) {   // the pool fish: a jump every 13 s after arrival, but never once the pelican has passed
+    const th0 = sceneT0 * SPEED / R_PATH, thPool = -td.poolA;
+    let d = (thPool - th0) % (Math.PI * 2); if (d < 0.05) d += Math.PI * 2;
+    const passT = sceneT0 + d * R_PATH / SPEED, local = t - sceneT0;
+    if (t >= passT || local < 2.5) return -1;
+    const u = (local - 2.5) % 13;
+    return t - u + 1.1 < passT ? u : -1;   // don't start a jump that would still be in the air as the pelican arrives
+  }
+  function updateTide(t) {
+    td.ground.material.uniforms.time.value = t;
+    td.crabs.forEach(c => {
+      const s = Math.sin(t * 0.35 + c.ph), a = c.a + s * 0.08;
+      c.g.position.set(Math.cos(a) * c.r, 0, Math.sin(a) * c.r); c.g.rotation.y = -a;
+      c.g.position.y = Math.abs(Math.sin(t * 9 + c.ph)) * 0.015;
+    });
+    const u = tideJump(t), P = td.poolPos;
+    const air = u >= 0 && u < 0.9, q = air ? u / 0.9 : 0;
+    td.fish.visible = air;
+    if (air) { td.fish.position.set(P.x + (q - 0.5) * 0.7, 0.05 + Math.sin(q * Math.PI) * 0.75, P.z); td.fish.rotation.set(0, 0.4, Math.atan2(Math.cos(q * Math.PI) * 2.3, 0.7)); }
+    const land = u >= 0.85 && u < 2.2 ? (u - 0.85) / 1.35 : -1;
+    td.ring.material.opacity = land >= 0 ? (1 - land) * 0.7 : 0; td.ring.scale.setScalar(land >= 0 ? 1 + land * 3 : 1);
+    td.drops.forEach((d, k) => { const v = land >= 0 ? land * 1.35 : -1; d.visible = v >= 0 && v < 0.5; if (d.visible) { const a = k / 8 * Math.PI * 2; d.position.set(P.x + 0.35 + Math.cos(a) * v * 0.6, 0.02 + v * 1.6 - v * v * 3.2, P.z + Math.sin(a) * v * 0.6); } });
+  }
+
+  ENV.tide = { sky: tideTex, fog: 0xE8A878, near: 60, far: 240, sun: 0xFFB070, sunI: 1.15, hemi: 0.72, hemiSky: 0xF4C8B0, hemiGround: 0x8A6450 };
+  // render helper: on the tidal flat, draw the upside-down world into the mirror texture first
+  const _rs = new THREE.Vector2();
+  function renderFrame() {
+    if (tideG.visible && td.rt) {
+      renderer.getDrawingBufferSize(_rs);
+      const w = Math.max(2, Math.floor(_rs.x / 2)), h = Math.max(2, Math.floor(_rs.y / 2));
+      if (td.rt.width !== w || td.rt.height !== h) td.rt.setSize(w, h);
+      td.ground.material.uniforms.res.value.copy(_rs);
+      td.ground.visible = false; scene.scale.y = -1;
+      renderer.setRenderTarget(td.rt); renderer.render(scene, camera);
+      renderer.setRenderTarget(null); scene.scale.y = 1; td.ground.visible = true;
+    }
+    renderer.render(scene, camera);
+  }
+  // ---------- behind the scenes (花絮) — unlocked after the last stop ----------
+  // A handheld reel of what nobody saw: at the tidal flat the pelican stops, puts a foot on the ground for the first
+  // time, gets off, and fishes (two NG takes first). Then, back at the lighthouse at night, it lays the fish down
+  // in front of its friends. Everything is still a function of time: u = seconds since the reel started.
+  const btsG = new THREE.Group(); btsG.visible = false; scene.add(btsG);
+  const BTS_L = 64;
+  const walker = new THREE.Group(); scene.add(walker);             // stands on the ground, faces local +x
+  const HIP_H = 0.66;   // pelicans stand low: knees well bent
+  const hipPivot = new THREE.Group(); hipPivot.position.y = HIP_H; walker.add(hipPivot);
+  const bts = { props: null, loc: '', friendHome: null, view: { pos: V(0, 2, 5), look: V(0, 1, 0), blur: 0 } };
+  const kick = rod(lean, V(-0.12, 0.44, 0.06), V(-0.34, 0.03, 0.32), 0.018, mat.metal); kick.visible = false;
+  function silverFish(parent, s) {
+    const g = new THREE.Group(); parent.add(g);
+    facet(g, M(0xD9E2E8, { metalness: 0.6, roughness: 0.3 }), V(0, 0, 0), [0.16, 0.055, 0.04], null, 1);
+    feather(g, M(0xB8C4CC, { metalness: 0.5 }), V(-0.14, 0, 0), V(-1, 0, 0), V(0, 0, 1), 0.1, 0.1);
+    facet(g, mat.eye, V(0.11, 0.015, 0.03), [0.012, 0.012, 0.01], null, 0);
+    g.scale.setScalar(s || 1); g.visible = false; return g;
+  }
+  function buildBtsProps() {
+    if (bts.props) return bts.props;
+    const P = {};
+    P.pouch1 = silverFish(beakGrp, 0.8); P.pouch1.position.set(0.36, -0.08, 0.01);
+    P.pouch2 = silverFish(beakGrp, 0.8); P.pouch2.position.set(0.18, -0.1, -0.01); P.pouch2.rotation.z = 0.25;   // the one we keep: tail pokes out
+    P.held = silverFish(beakGrp, 0.9); P.held.position.set(0.8, -0.06, 0);
+    const weedCurve = new THREE.CatmullRomCurve3([V(0.76, -0.03, 0), V(0.82, -0.2, 0.03), V(0.75, -0.38, -0.02), V(0.8, -0.55, 0.02)]);
+    P.weed = new THREE.Mesh(new THREE.TubeGeometry(weedCurve, 12, 0.025, 4, false), M(0x4E7A3A)); P.weed.visible = false; beakGrp.add(P.weed);
+    P.bulge = facet(headGrp, pm.body, V(0, 0, 0), [0.085, 0.085, 0.085], null, 1); P.bulge.visible = false;
+    P.plate = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.05, 16), M(0xF4F1EA)); P.plate.position.set(0, 0.14, 2.62); btsG.add(P.plate);
+    P.plateFish = silverFish(btsG, 1.0); P.plateFish.position.set(0, 0.2, 2.62); P.plateFish.rotation.y = 0.6;
+    P.splash = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.2, 24), new THREE.MeshBasicMaterial({ color: 0xFFF0D8, transparent: true, opacity: 0, depthWrite: false })); P.splash.rotation.x = -Math.PI / 2; btsG.add(P.splash);
+    P.drops = []; for (let k = 0; k < 8; k++) { const d = facet(btsG, mat.cloud, V(), [0.03, 0.03, 0.03], null, 0); d.visible = false; P.drops.push(d); }
+    P.fall = silverFish(btsG, 0.9);
+    P.fill = new THREE.PointLight(0xFFD9A8, 0.9, 12, 1.5); P.fill.position.set(2.2, 2.6, 5.6); btsG.add(P.fill);
+    bts.props = P; return P;
+  }
+  const sm = (x, a, b) => { const q = Math.min(1, Math.max(0, (x - a) / (b - a))); return q * q * (3 - 2 * q); };
+  const _pv = new THREE.Vector3(), _pw = new THREE.Vector3();
+  function pivotRot(obj, px, py, a) {   // rotate a group about the point (px, py) in its parent's xy-plane
+    const c = Math.cos(a), s = Math.sin(a); obj.rotation.z = a; obj.position.set(px - (px * c - py * s), py - (px * s + py * c), 0);
+  }
+  function setNeck(a) { pivotRot(headGrp, 0.02, 1.72, a); }
+  function setWings(a) { wingGrps.forEach(g => pivotRot(g, -0.04, 1.7, a)); }
+  const WING_FOLD = -2.3;
+  function mountBird() {
+    if (bird.parent !== lean) lean.add(bird);
+    bird.position.set(0, 0, 0); bird.rotation.set(0, 0, 0); setWings(0); setNeck(0); headGrp.rotation.y = 0;
+  }
+  function dismountBird() {
+    if (bird.parent !== hipPivot) hipPivot.add(bird);
+    bird.position.set(0.32, -1.3, 0); bird.rotation.set(0, 0, 0); setWings(WING_FOLD);
+  }
+  function headingY(dx, dz) { return Math.atan2(-dz, dx); }
+  function placeBike(x, y, z, ry, dist, lean0, footDown) {
+    rider.position.set(x, y, z); rider.rotation.y = ry; rider.scale.setScalar(1);
+    lean.rotation.x = lean0; lean.position.y = 0;
+    const wr = -dist / WR; rearWheel.rotation.z = wr; frontWheel.rotation.z = wr;
+    const ca = -dist / WR * 0.55;
+    [0, 1].forEach(i => {
+      const a = ca + i * Math.PI, side = i === 0 ? 0.16 : -0.16;
+      const pp = V(BB.x + Math.cos(a) * CRANK, BB.y + Math.sin(a) * CRANK, side);
+      placeBetween(crankArms[i], V(BB.x, BB.y, side * 0.7), pp); pedals[i].position.copy(pp);
+      if (bird.parent !== lean) return;
+      const target = pp.clone().add(V(0, 0.03, 0));
+      if (i === 0 && footDown > 0) target.lerp(V(-0.12, 0.03, 0.44), footDown);   // the first foot on the ground
+      const lg = legs[i], knee = solveKnee(HIP[i], target);
+      placeBetween(lg.thigh, HIP[i], knee); placeBetween(lg.shin, knee, target); lg.knee.position.copy(knee);
+      lg.foot.position.copy(target).add(V(0.05, 0.015, 0)); lg.foot.rotation.set(Math.PI / 2, 0, -Math.PI / 2);
+    });
+    return ca;
+  }
+  function standBird(x, y, z, ry, pitch, neck, walkD, roll) {   // walkD: distance walked, drives the stepping
+    walker.position.set(x, y, z); walker.rotation.set(roll || 0, ry, 0);
+    hipPivot.rotation.z = pitch; hipPivot.position.y = HIP_H - Math.max(0, -pitch) * 0.08;
+    setNeck(neck);
+    walker.updateMatrixWorld(true);
+    const w = walkD / 0.32 * Math.PI;
+    [0, 1].forEach(i => {
+      const ph = w + i * Math.PI, moving = walkD > 0 ? 1 : 0;
+      _pw.set(0.02 + Math.sin(ph) * 0.14 * moving, 0.02 + Math.max(0, Math.cos(ph)) * 0.09 * moving, i === 0 ? 0.15 : -0.15);
+      walker.localToWorld(_pw); bird.worldToLocal(_pw);
+      const lg = legs[i], target = _pw.clone(), knee = solveKnee(HIP[i], target, true);
+      placeBetween(lg.thigh, HIP[i], knee); placeBetween(lg.shin, knee, target); lg.knee.position.copy(knee);
+      lg.foot.position.copy(target).add(V(0.05, 0.015, 0)); lg.foot.rotation.set(Math.PI / 2, 0, -Math.PI / 2);
+    });
+  }
+  function btsLoc(loc) {
+    if (bts.loc === loc) return; bts.loc = loc;
+    const tide = loc === 'tide';
+    tideG.visible = tide; nightIslandG.visible = !tide; island.visible = !tide; sea.visible = !tide; glint.visible = false;
+    setEnv(tide ? ENV.tide : ENV.homecoming);
+    [sunDisc, halo].forEach(o => { o.visible = tide; }); clouds.forEach(c => { c.visible = tide; }); gulls.forEach(q => { q.g.visible = tide; });
+  }
+  const _shake = new THREE.Vector3();
+  function shakeAt(u, k) { return _shake.set(Math.sin(u * 1.3) * 0.045 + Math.sin(u * 3.7) * 0.012, Math.sin(u * 1.9 + 1) * 0.03 + Math.sin(u * 5.1) * 0.006, Math.cos(u * 1.1) * 0.04).multiplyScalar(k); }
+  // the shot list: [start, end, slate, verdict]
+  const SHOTS = [[0, 1.5, '', ''], [1.5, 8.5, 'S1 · T1', ''], [8.5, 15, 'S2 · T1', 'NG'], [15, 21.5, 'S2 · T2', 'NG'], [21.5, 30.5, 'S2 · T3', 'OK'], [30.5, 36.5, 'S3 · T1', ''], [36.5, 58, 'S4 · T1', ''], [58, 64, '', '']];
+  function poseBTS(t) {
+    const u = ((t - sceneT0) % BTS_L + BTS_L) % BTS_L, P = buildBtsProps(), view = bts.view;
+    let si = 0; while (si < SHOTS.length - 1 && u >= SHOTS[si][1]) si++;
+    const τ = u - SHOTS[si][0];
+    const pool = td.poolPos, out = V(pool.x, 0, pool.z).normalize(), side = V(-out.z, 0, out.x);
+    const stand = pool.clone().addScaledVector(out, -1.2), bikeP = stand.clone().addScaledVector(out, -1.1).addScaledVector(side, 1.0);
+    const rideDir = side.clone().negate();   // the bike arrives along the track direction
+    [P.pouch1, P.pouch2, P.held, P.weed, P.bulge, P.fall].forEach(o => { o.visible = false; });
+    P.drops.forEach(d => { d.visible = false; }); P.splash.material.opacity = 0; P.plateFish.visible = false;
+    pouch.scale.set(0.33, 0.075, 0.055); headGrp.rotation.y = 0; kick.visible = false;
+    view.blur = 0.4;
+    if (si <= 5) btsLoc('tide'); else btsLoc('island');
+    if (si <= 1 || si === 5) mountBird(); else dismountBird();
+    bts.riding = false;
+    if (si === 0) { view.pos.set(0, 2, 5); view.look.set(0, 1, 0); }
+    if (si === 1) {   // S1: riding in, braking, and the first foot on the ground
+      const v0 = 1.8, tb = 3.5, td2 = 2.0;
+      const dist = τ < tb ? v0 * τ : τ < tb + td2 ? v0 * tb + v0 * (τ - tb) - 0.5 * (v0 / td2) * (τ - tb) * (τ - tb) : v0 * tb + v0 * td2 / 2;
+      const total = v0 * tb + v0 * td2 / 2, foot = sm(τ, 5.6, 6.5);
+      const pos = bikeP.clone().addScaledVector(rideDir, dist - total);
+      placeBike(pos.x, 0.04, pos.z, headingY(rideDir.x, rideDir.z), dist, -0.07 + foot * 0.19, foot); bts.riding = τ < tb + td2; bts.dist = dist;
+      bird.position.y = 0; headGrp.position.set(0, 0, 0); setNeck(0); headGrp.rotation.y = τ > 6.3 ? Math.sin((τ - 6.3) * 1.2) * 0.35 : 0;
+      view.pos.copy(bikeP).addScaledVector(rideDir, 3.4).addScaledVector(out, -2.9).add(V(0, 1.05, 0));
+      view.look.copy(rider.position).add(V(0, 1.35, 0)); view.blur = τ > 5.8 && τ < 6.6 ? 1.2 : 0.3;
+    } else if (si >= 2 && si <= 4) {   // S2: the fishing takes
+      placeBike(bikeP.x, 0.04, bikeP.z, headingY(rideDir.x, rideDir.z), 0, 0.2, 0); kick.visible = true;
+      const k = sm(τ, 0.8, 1.7) * (1 - sm(τ, 1.9, 2.6));
+      let pitch = -0.86 * k, neck = -0.72 * k, yaw = 0;
+      if (si === 2) {   // NG: a mouthful of seaweed
+        P.weed.visible = τ > 1.8 && τ < 4.3;
+        if (τ > 2.6 && τ < 4.2) yaw = Math.sin((τ - 2.6) * 18) * 0.35 * (1 - (τ - 2.6) / 1.6);
+        P.weed.rotation.x = yaw * 1.5;
+        view.pos.copy(stand).addScaledVector(side, 3.5).addScaledVector(out, 0.2).add(V(0, 1.35, 0));
+        view.look.copy(stand).addScaledVector(out, 0.5).add(V(0, 1.0, 0));
+      } else if (si === 3) {   // NG: the fish wriggles free and drops back in
+        P.held.visible = τ > 1.8 && τ < 2.9;
+        P.held.rotation.set(Math.sin(τ * 30) * 0.5, 0, Math.sin(τ * 22) * 0.3);
+        if (τ >= 2.9 && τ < 3.5) {   // falling, drawn in world space from the beak tip's position at release
+          const q = (τ - 2.9) / 0.6;
+          P.fall.visible = true; P.fall.position.copy(stand).addScaledVector(out, 1.25 + q * 0.25).add(V(0, 0.95 * (1 - q * q) + 0.02, 0));
+          P.fall.rotation.set(q * 6, 0, q * 9);
+        }
+        const land = τ >= 3.45 ? (τ - 3.45) / 1.3 : -1;
+        if (land >= 0 && land < 1) { const sp = stand.clone().addScaledVector(out, 1.5); P.splash.position.set(sp.x, 0.02, sp.z); P.splash.material.opacity = (1 - land) * 0.8; P.splash.scale.setScalar(1 + land * 4);
+          P.drops.forEach((d, j) => { const v = land * 1.3; d.visible = v < 0.5; const a = j / 8 * Math.PI * 2; d.position.set(sp.x + Math.cos(a) * v * 0.5, 0.02 + v * 1.4 - v * v * 2.8, sp.z + Math.sin(a) * v * 0.5); }); }
+        if (τ > 3.0 && τ < 4.8) { pitch = -0.28; neck = -0.35; }   // staring at the water where the fish went
+        view.pos.copy(stand).addScaledVector(side, 3.1).addScaledVector(out, 1.2).add(V(0, 1.2, 0));
+        view.look.copy(stand).addScaledVector(out, 0.9).add(V(0, 0.8, 0));
+      } else {   // OK: two fish; one swallowed, one kept
+        const full = τ > 1.9 && τ < 7.8;
+        P.pouch1.visible = τ > 1.9 && τ < 3.2; P.pouch2.visible = τ > 1.9;
+        pouch.scale.set(0.33, 0.075 + (full ? (τ < 3.2 ? 0.06 : 0.035) : 0), 0.055 + (full ? 0.02 : 0));
+        const up = sm(τ, 2.8, 3.3) * (1 - sm(τ, 4.2, 4.8)); pitch += 0.12 * up; neck += 0.45 * up;
+        if (τ > 3.2 && τ < 4.3) { const q = (τ - 3.2) / 1.1; P.bulge.visible = true; P.bulge.position.copy(neckCurve.getPoint(1 - q)); }
+        if (τ > 5.0) yaw = sm(τ, 5.0, 6.0) * 0.7;   // looks toward the horizon, where the lighthouse is
+        view.pos.copy(stand).addScaledVector(out, 3.1).addScaledVector(side, 1.6).add(V(0, 1.5, 0));
+        view.look.copy(stand).addScaledVector(out, 0.3).add(V(0, 1.35, 0)); view.blur = 0.2;
+      }
+      standBird(stand.x, 0, stand.z, headingY(out.x, out.z), pitch, neck, 0, 0);
+      headGrp.rotation.y = yaw;
+    } else if (si === 5) {   // S3: riding home across the flat, fish tail poking out of the pouch
+      const d = V(-0.62, 0, 0.78).normalize(), s0 = V(10, 0, -9);
+      const dist = τ * 1.8, pos = s0.clone().addScaledVector(d, dist);
+      const ca = placeBike(pos.x, 0.04, pos.z, headingY(d.x, d.z), dist, -0.07, 0); bts.riding = true; bts.dist = dist + 100;
+      bird.position.y = Math.sin(ca * 2) * 0.012; headGrp.position.set(0, 0, 0); setNeck(0);
+      P.pouch2.visible = true; pouch.scale.set(0.33, 0.11, 0.075);
+      view.pos.copy(s0).addScaledVector(d, 12.8).add(V(1.3, 0.9, 0)); view.look.copy(rider.position).add(V(0, 0.9, 0));
+    } else if (si === 6) {   // S4: the lighthouse, at night
+      updateHomecoming(t);
+      const bike = V(2.35, 0.12, 3.5), A = V(1.55, 0.12, 3.95), B = V(0, 0.12, 3.42);
+      placeBike(bike.x, bike.y, bike.z, headingY(-0.3, -1), 0, 0.2, 0); kick.visible = true;
+      const wq = sm(τ, 0.6, 4.2), pos = A.clone().lerp(B, wq), walkD = wq * A.distanceTo(B);
+      const face = sm(τ, 4.2, 4.9), ry = (1 - face) * headingY(B.x - A.x, B.z - A.z) + face * headingY(0, -1);
+      const lay = sm(τ, 4.9, 5.9) * (1 - sm(τ, 6.2, 7.1));
+      const hasFish = τ < 5.6;
+      P.pouch2.visible = hasFish; pouch.scale.set(0.33, hasFish ? 0.11 : 0.075, hasFish ? 0.075 : 0.055);
+      const eaten = sm(τ, 8.6, 10.6);
+      P.plateFish.visible = τ >= 5.6 && eaten < 0.98; P.plateFish.scale.setScalar(1 - Math.floor(eaten * 4) / 4 * 0.9);
+      standBird(pos.x, pos.y, pos.z, ry, -0.72 * lay, -0.62 * lay, walkD, Math.sin(walkD / 0.32 * Math.PI) * 0.06 * (wq > 0 && wq < 1 ? 1 : 0));
+      headGrp.rotation.y = τ > 7.4 && τ < 12 ? -0.45 * sm(τ, 7.4, 8.0) : τ >= 12 ? 0.2 * Math.sin((τ - 12) * 0.4) : 0;
+      // the friends
+      const f0 = hc.friends[0], f1 = hc.friends[1];
+      if (!bts.friendHome) bts.friendHome = hc.friends.map(f => ({ p: f.g.position.clone(), r: f.g.rotation.clone() }));
+      const turn = sm(τ, 6.8, 7.6), h0 = bts.friendHome[0];
+      f0.g.position.copy(h0.p).lerp(V(-0.62, 0.12, 2.5), turn);
+      f0.g.rotation.set(0, h0.r.y * (1 - turn) + headingY(0.62, 0.12) * turn, -0.55 * sm(τ, 7.8, 8.4) * (1 - sm(τ, 10.6, 11.4)) * (0.85 + 0.15 * Math.sin(τ * 9)));
+      f0.wing.rotation.x = 0;
+      f1.wing.rotation.x = τ > 9 && τ < 13 ? Math.max(0, Math.sin((τ - 9) * 4)) * 1.1 : 0;
+      // camera: medium on the walk, held back and soft while the friend eats, then a slow pull-back
+      const pull = sm(τ, 12, 21.5);
+      view.pos.set(3.1, 1.6, 6.8).lerp(V(2.1, 1.5, 6.3), sm(τ, 6.5, 8)).lerp(V(4.2, 3.4, 10.5), pull);
+      view.look.copy(walker.position).add(V(0, 1.2, 0)).lerp(V(-0.25, 0.8, 2.7), sm(τ, 6.5, 8)).lerp(V(0, 1.6, 2.0), pull);
+      view.blur = 0.3 + 3.0 * sm(τ, 7.6, 8.6) * (1 - sm(τ, 10.4, 12.2));
+    } else if (si === 7) { view.blur = 0; }
+    if (si >= 1 && si <= 5) { td.ground.material.uniforms.time.value = t; td.fish.visible = false; }
+    P.plate.visible = si === 6; P.fill.visible = si === 6;
+    btsG.visible = true;
+    btsOverlay(u, si, τ);
+    if (si !== 6 && bts.friendHome) hc.friends.forEach((f, k) => { f.g.position.copy(bts.friendHome[k].p); f.g.rotation.copy(bts.friendHome[k].r); });
+    rider.updateMatrixWorld(true); walker.updateMatrixWorld(true);
+  }
+  function exitBTS() {
+    mountBird(); kick.visible = false; btsG.visible = false; bts.loc = ''; pouch.scale.set(0.33, 0.075, 0.055);
+    if (bts.props) [bts.props.pouch1, bts.props.pouch2, bts.props.held, bts.props.weed, bts.props.bulge].forEach(o => { o.visible = false; });
+    if (bts.friendHome) hc.friends.forEach((f, k) => { f.g.position.copy(bts.friendHome[k].p); f.g.rotation.copy(bts.friendHome[k].r); });
+    renderer.domElement.style.filter = ''; document.body.classList.remove('bts');
+  }
+  // the camcorder overlay
+  const btsUI = document.createElement('div'); btsUI.id = 'btsUI';
+  btsUI.innerHTML = '<div class="bar top"></div><div class="bar bot"></div><div class="vig"></div>' +
+    '<div class="rec"><i></i>REC　花絮　<span class="tc">00:00:00:00</span></div><div class="slate"></div><div class="stamp"></div>' +
+    '<div class="black"><div class="card1">花絮<small>BEHIND THE SCENES</small></div><div class="card2">（完）<small>點菜：牛牛（GLM 5.3）　·　拍攝：Opus</small></div></div>' +
+    '<div class="ctl"><button type="button" class="snd">聲音 ○</button><button type="button" class="out">回到正片 →</button></div>';
+  document.body.appendChild(btsUI);
+  const ui = { tc: btsUI.querySelector('.tc'), slate: btsUI.querySelector('.slate'), stamp: btsUI.querySelector('.stamp'), black: btsUI.querySelector('.black'), c1: btsUI.querySelector('.card1'), c2: btsUI.querySelector('.card2') };
+  function btsOverlay(u, si, τ) {
+    document.body.classList.add('bts');
+    const f = Math.floor(u * 24), ss = Math.floor(u) % 60, mm = Math.floor(u / 60);
+    ui.tc.textContent = '00:' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0') + ':' + String(f % 24).padStart(2, '0');
+    const sh = SHOTS[si], dur = sh[1] - sh[0];
+    ui.slate.textContent = sh[2]; ui.slate.style.opacity = sh[2] ? 1 : 0;
+    const showStamp = sh[3] && τ > dur - 1.4;
+    ui.stamp.textContent = sh[3]; ui.stamp.className = 'stamp' + (showStamp ? ' on ' + sh[3].toLowerCase() : '');
+    let bl = 0; if (si === 0) bl = 1 - sm(τ, 1.1, 1.5); else if (si === 7) bl = sm(τ, 0, 1.2); else if (τ < 0.12) bl = 1 - τ / 0.12;   // a hard little flash at every cut
+    ui.black.style.opacity = bl; ui.c1.style.opacity = si === 0 ? 1 : 0; ui.c2.style.opacity = si === 7 ? sm(τ, 1.3, 2.2) * (1 - sm(τ, 5.2, 5.9)) : 0;
+    renderer.domElement.style.filter = bts.view.blur > 0.05 ? 'blur(' + bts.view.blur.toFixed(2) + 'px) saturate(0.92)' : '';
+  }
   ENV.wet = { sky: morningTex, fog: 0xDCE6EC, near: 30, far: 120, sun: 0xFFF0D8, sunI: 1.0, hemi: 0.8, hemiSky: 0xE6F0FA, hemiGround: 0x9A9080 };
-  let sceneName = 'island';
+  let sceneName = 'island', sceneT0 = 0;   // sceneT0: the clock time when the current scene was entered
   const islandOnly = [island, sea, glint];
-  function setScene(name) {
+  function setScene(name, t0) {
     buildScene(name);
-    sceneName = name;
+    if (name === 'bts') { buildScene('tide'); buildScene('homecoming'); bts.loc = ''; } else exitBTS();
+    sceneName = name; sceneT0 = t0 || 0;
     islandOnly.forEach(o => { o.visible = name === 'island' || (name === 'homecoming' && o !== glint); });
     nightIslandG.visible = name === 'homecoming';
     veniceG.visible = name === 'venice'; veniceGear.forEach(o => { o.visible = name === 'venice'; });
+    tideG.visible = name === 'tide';
     rabbitG.visible = name === 'rabbit'; rabbitGear.forEach(o => { o.visible = name === 'rabbit'; }); rider.scale.setScalar(1);
     school.visible = name === 'school';
     market.visible = night.visible = basket.visible = name === 'market';
@@ -3562,8 +3928,8 @@
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit';
-    setEnv(isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit', isTide = name === 'tide';
+    setEnv(isTide ? ENV.tide : isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
     [sunDisc, halo].forEach(o => { o.visible = !isRabbit && !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
     clouds.forEach(c => { c.visible = !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
     gulls.forEach(q => { q.g.visible = !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
@@ -3573,6 +3939,7 @@
   // ---------- animation state ----------
   const SPEED = 1.8; // m/s along path
   function pose(t) {
+    if (sceneName === 'bts') { poseBTS(t); updateGulls(t); clouds.forEach(c => { const a = c.userData.a + t * 0.012; c.position.set(Math.cos(a) * c.userData.r, c.userData.y, Math.sin(a) * c.userData.r); c.rotation.y = -a; }); return; }
     const dist = t * SPEED;
     const th = dist / R_PATH;
     const ph = -th;
@@ -3604,7 +3971,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else if (sceneName === 'tide') updateTide(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -3619,6 +3986,9 @@
   // cinematic camera: orbits slowly around the rider in its own frame
   const tmp = new THREE.Vector3(), focus = new THREE.Vector3();
   function autoCam(t) {
+    if (sceneName === 'bts') {   // the handheld camera of the reel
+      const sh = shakeAt(t, 1); camera.position.copy(bts.view.pos).add(sh); focus.copy(bts.view.look).addScaledVector(sh, 0.5); camera.lookAt(focus); return;
+    }
     const psi = 2.1 + t * 0.22;       // around rider
     const dist = 4.6 + Math.sin(t * 0.3) * 0.8;
     const h = 1.6 + Math.sin(t * 0.21 + 1) * 0.7;
@@ -3652,7 +4022,7 @@
     window.renderAt = function (t, cam) {
       pose(t); autoCam(t);
       if (cam) { camera.position.set(cam[0], cam[1], cam[2]); camera.lookAt(cam[3], cam[4], cam[5]); }
-      renderer.render(scene, camera);
+      renderFrame();
     };
     window.__ready = true;
     return;
@@ -3675,15 +4045,17 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞' };
-  function applyScene(name) { setScene(name); btnScene.textContent = SCENE_LABEL[name]; }
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞', tide: '場景：潮間帶', bts: '花絮' };
+  function applyScene(name) {
+    if (name === 'bts' && audio && !audio.paused) btnMusic.onclick();   // the reel has no theme music
+    setScene(name, t); btnScene.textContent = SCENE_LABEL[name];
+  }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'homecoming'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'tide', 'homecoming', 'bts'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
   };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit'].includes(location.hash)) applyScene(location.hash.slice(1));
   // editing the #hash by hand now switches scenes too (bug spotted by Kimi)
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SCENE_LABEL[h] && h !== sceneName) applyScene(h); });
   const btnMusic = document.getElementById('music');
@@ -3703,6 +4075,47 @@
         .catch(() => { btnMusic.textContent = '♪ 音樂無法播放'; });
     } else { audio.pause(); btnMusic.textContent = '♪ 播放音樂'; btnMusic.setAttribute('aria-pressed', 'false'); }
   };
+
+  // ---------- sound for the reel: no theme, only the sea, the wind and the chain — then one phrase, once ----------
+  const PHRASE_AT = 70.2;   // where the theme comes back after its pause, in score.mp3
+  const ba = { on: false, lastClick: 0, phraseOn: false };
+  function btsAudioInit() {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+    const ac = audioLink.ctx || new AC(); audioLink.ctx = ac; ba.ac = ac;
+    const buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const mk = (type, f, q) => { const src = ac.createBufferSource(); src.buffer = buf; src.loop = true; const fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ac.createGain(); g.gain.value = 0; src.connect(fl); fl.connect(g); g.connect(ac.destination); src.start(); return g; };
+    ba.waves = mk('lowpass', 420, 0.7); ba.wind = mk('bandpass', 1300, 0.6); ba.buf = buf;
+    ba.el = new Audio('score.mp3'); ba.pg = ac.createGain(); ba.pg.gain.value = 0;
+    try { const ps = ac.createMediaElementSource(ba.el); ps.connect(ba.pg); ba.pg.connect(ac.destination); } catch (e) {}
+    return true;
+  }
+  function btsClick() {
+    const ac = ba.ac, src = ac.createBufferSource(); src.buffer = ba.buf; const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3200;
+    const g = ac.createGain(), now = ac.currentTime; g.gain.setValueAtTime(0.09, now); g.gain.exponentialRampToValueAtTime(0.0008, now + 0.035);
+    src.connect(hp); hp.connect(g); g.connect(ac.destination); src.start(now, Math.random(), 0.05);
+  }
+  function btsAudioTick(t) {
+    if (!ba.on || !ba.ac) return;
+    const u = ((t - sceneT0) % BTS_L + BTS_L) % BTS_L, inBts = sceneName === 'bts', now = ba.ac.currentTime;
+    const tide = inBts && u >= 1.5 && u < 36.5, isl = inBts && u >= 36.5 && u < 58;
+    ba.waves.gain.setTargetAtTime(tide ? 0.16 + 0.07 * Math.sin(u * 0.8) : isl ? 0.11 + 0.04 * Math.sin(u * 0.6) : 0, now, 0.25);
+    ba.wind.gain.setTargetAtTime(tide ? 0.045 : isl ? 0.02 : 0, now, 0.4);
+    if (inBts && bts.riding) { const k = Math.floor(bts.dist / 0.3); if (k !== ba.lastClick) { ba.lastClick = k; btsClick(); } }
+    const rel = u - 44.3, want = inBts && rel >= 0 && rel < 8.5;
+    if (want && !ba.phraseOn) { ba.phraseOn = true; try { ba.el.currentTime = PHRASE_AT + rel; ba.el.play(); } catch (e) {} }
+    if (!want && ba.phraseOn) { ba.phraseOn = false; ba.el.pause(); }
+    ba.pg.gain.setTargetAtTime(want ? 0.55 * sm(rel, 0, 1.4) * (1 - sm(rel, 5.5, 8.2)) : 0, now, 0.08);
+  }
+  const btnSnd = btsUI.querySelector('.snd'), btnOut = btsUI.querySelector('.out');
+  btnSnd.onclick = () => {
+    if (!ba.ac && !btsAudioInit()) return;
+    if (ba.ac.state === 'suspended') ba.ac.resume();
+    ba.on = !ba.on; btnSnd.textContent = ba.on ? '聲音 ●' : '聲音 ○';
+    if (!ba.on) { ba.waves.gain.value = 0; ba.wind.gain.value = 0; ba.pg.gain.value = 0; if (ba.phraseOn) { ba.phraseOn = false; ba.el.pause(); } }
+  };
+  btnOut.onclick = () => { applyScene('island'); try { history.replaceState(null, '', '#island'); } catch (e) {} };
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
   controls.addEventListener('start', () => { if (auto) { auto = false; controls.target.copy(focus); syncUI(); } });
   syncUI();
 
@@ -3711,7 +4124,7 @@
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (playing) t += dt * speed;
-    pose(t);
+    pose(t); btsAudioTick(t);
     if (auto) { autoCam(t); prevFocus.copy(focus); }
     else {
       focus.set(0.1, 1.3, 0); rider.localToWorld(focus);
@@ -3719,7 +4132,7 @@
       camera.position.add(delta); controls.target.add(delta); prevFocus.copy(focus);
       controls.update();
     }
-    renderer.render(scene, camera);
+    renderFrame();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);

@@ -9,7 +9,7 @@
 
 ## 1. Architecture
 
-The whole project is a single `index.html`, about 3,700 lines and 350 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
+The whole project is a single `index.html`, about 4,100 lines and 380 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
 
 **Why one file?** Because the point is to share it. One link, and it runs: nothing to install, bundle or host. The price is maintainability (see section 9).
 
@@ -17,9 +17,9 @@ The whole project is a single `index.html`, about 3,700 lines and 350 KB. Its on
 index.html
 ├─ shared helpers: facet / feather / rod / placeBetween / radialTex
 ├─ the hero: rider (position, heading) → lean (tilt into the turn) → bike + bird (the pelican)
-├─ 22 scenes, each one a THREE.Group:
+├─ 23 scenes, each one a THREE.Group (plus a behind-the-scenes reel):
 │    island / school / market / circle / kyoto / moon / polar /
-│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / rabbit / homecoming
+│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / rabbit / tide / homecoming  + bts
 ├─ ENV: one environment preset per scene (sky, fog, sun, ambient light)
 ├─ setScene(name): shows the right groups, applies the ENV, puts on the right outfit
 └─ pose(t): given a time t, computes everything on screen at that instant
@@ -149,6 +149,7 @@ There isn't a single image file. Every texture is drawn at runtime on a `<canvas
 | Botanical garden | The conservatory is a hemisphere of glass squashed to 0.78× height, with 24 white iron ribs along the meridians (`TubeGeometry` along a curve) and 4 rings of latitude. Four kinds of cactus: saguaros are cylinders with right-angled arms, golden barrels are spheres with 12 spines, prickly pears are squashed spheres, and agaves are the all-purpose feather arranged as a rosette. Eight beds around the outside take turns with tulips, hydrangeas, lavender and daisies; cherry petals reuse the falling-leaf code from Kyoto |
 | Venice | Requested by GPT Sol. To be honest: cycling is banned in historic Venice, so this pelican is breaking the rules, and the pigeons are keeping it quiet. A paved square (campo) in the middle, ringed by a canal whose surface moves with vertex waves; four arched bridges cross it. 22 pastel palazzi, with gothic windows, green shutters and window boxes painted in canvas. Four gondolas circle the canal, their gondoliers in striped shirts and straw hats, rowing. Thirty pigeons peck at the ground; when the pelican rides close (angular distance under 0.55, within 2.6 of the lane) they flap up into the air, then settle back once it has passed. A brick bell tower stands in the distance |
 | Rabbit hole | Requested by Space Bunny. The sense of falling doesn't come from moving the camera: the wall texture scrolls upward (`texture.offset.y` decreasing over time) and eighty floating objects drift up at their own speeds, while the pelican keeps riding in place. The wall is the inside of a cylinder, where a texture reads mirror-written, so `repeat.x` is negative to flip it back. The track is a ring with remapped UVs so the checkerboard runs round the circle. The watch face, the DRINK ME label and the playing cards are drawn in canvas; the hands run backwards. The shrinking scales the whole bike and pelican to 0.55×; the camera lives in the pelican's frame, so it shrinks too, and on screen the pelican stays the same size while the world seems to grow. The White Rabbit uses the same path formula as the dog, 2.6 units ahead, and its ears are the all-purpose feather |
+| Tidal flat | Requested by 牛牛 (GLM 5.3). The reflections in the wet sand are true planar reflections: every frame the whole world is flipped upside down (`scene.scale.y = -1`) and drawn with the same camera into a half-resolution texture, and the sand reads that texture at the same screen position, so each reflection lands exactly where it should. The sand is a custom shader: a few sine waves make pools, runnels and dry ridges; pools reflect the most, ridges hardly at all, the track is firm damp sand, and it turns into sea further out, with a gentle ripple so the reflections wobble a little. The paper boats are two extruded hull sides and a feather for a sail, leaning in the mud. A small lighthouse island sits on the horizon |
 | Homecoming | The last stop. It reuses the island and sea from the first scene with a night-time ENV, so it really is the same island. The lighthouse's two beams are open cones with a gradient that fades away from the lamp. The blue bioluminescent plankton are 2,600 additively blended points, recoloured every frame by wave fronts rolling toward the shore, brightest near the sand. Warm light at the lighthouse door, two pelican friends waiting, one of them waving a wing. The pelican wears nothing at all, just as it did at the start |
 
 ---
@@ -184,6 +185,7 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 - The aurora's edges looked cut off, so it now fades out horizontally.
 - The dog followed too closely and its head ended up in the pelican's tail, so it was moved back.
 - Venice: a café umbrella blocked the follow camera, so the umbrellas are now closed; and the pigeons were nearly the size of the pelican's head, so they were scaled down. Later, while picking stills, the follow camera turned out to clip into a bridge now and then, so it now stays on the square side, and every startled pigeon flies outward over the canal.
+- Tidal flat: the dry ridges were first textured with two multiplied sine waves, which came out as a grey checkerboard, so they became faint wind ripples instead.
 - Rabbit hole: the ORANGE MARMALADE lettering on the walls was mirror-written (a texture seen from inside a cylinder is flipped), so the texture is flipped horizontally.
 
 ---
@@ -193,6 +195,7 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 - **Three.js r128 is old.** It was chosen because it still ships a UMD build that loads with a plain `<script>` tag.
 - **Everything in one file, no modules.** Great for sharing, not for long-term maintenance. Better: one module per scene, with the helpers and the hero pulled out.
 - **Mobile performance.** Scenes are now built on first visit, but once visited they stay in memory. The rain updates over three thousand drops per frame, which may still stutter on older phones. Shadow resolution and particle counts could be lowered per device.
+- **The tidal flat draws everything twice.** The reflection needs the whole world rendered upside down first, so this stop is heavier than the others; the reflection texture is half resolution to save a little.
 - **No collision detection.** Cars don't hit the pelican because everyone stays in their own lane, not because of any real physics.
 
 ---
@@ -205,3 +208,30 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 The whole thing is completely useless, and making it was a joy.
 
 It left from a small island, rode through twenty places, and came back to the same island. This time it was night, the lighthouse was lit, and someone was waiting at the door.
+
+---
+
+## Appendix: the behind-the-scenes reel (spoilers — read after watching)
+
+Near the track on the tidal flat there is a tide pool with a fish in it. After you arrive it jumps about every 13 seconds, but only until the pelican has ridden past the pool once; after that the pool stays still. In the main film the pelican doesn't slow down or look back, not even once. That came from 牛牛: a secret should be rare, and the innocence complete.
+
+After Homecoming, press the Scene button once more for a 64-second reel, shot as if on a handheld camera, of the part nobody saw:
+
+1. **S1**: the pelican brakes on the sandbar and puts one foot on the ground. In 22 stops it has never touched the ground before.
+2. **S2 · T1　NG**: it gets off to fish and comes up with a mouthful of seaweed, shakes its head and spits it out.
+3. **S2 · T2　NG**: it catches one, the fish wriggles in its beak and drops back into the water.
+4. **S2 · T3　OK**: it catches two, swallows one (a small bulge slides down its neck) and keeps one, the tail poking out of its pouch.
+5. **S3**: riding back across the flat at dusk with the fish.
+6. **S4**: the lighthouse at night. It parks the bike, walks to the door and lays the fish on a small plate in front of its friends. One friend bends down to eat; the other waves a wing.
+
+Technically, this is the first time the pelican leaves the bike:
+
+- **Getting off**: the pelican used to be fixed to the bike. In the reel it is lifted off and placed in a node that stands on the ground, and its feet step on the ground instead of the pedals.
+- **Standing**: the first time it stood up it looked like a stork, legs too long and too straight. The hips now sit at 0.66, so the legs stay bent, and when standing the joint bends backward, because what looks like a bird's knee is really its ankle. Riding keeps the forward bend.
+- **Wings**: when riding they always reach for the handlebar; when standing they fold back along the flanks.
+- **Fishing**: the body pitches forward about the hips and the neck bends down about its base, so the tip of the beak just touches the water.
+- **Camera**: every shot has its own set-up, plus a handheld wobble made of a few sine waves at different speeds. The blur is saved for the few seconds when the friend eats, as if the camera operator didn't dare get closer.
+- **Sound**: no theme music in the reel. Waves and wind are filtered noise synthesized live in the browser, and the chain is a short click every 30 cm while riding. Only when the friend bends to eat does the score come back, from the phrase at 70 seconds, softly, for a few seconds. Press "聲音" (sound) in the bottom-right corner to hear it.
+- **Interface**: the control panel disappears, leaving letterbox bars, a REC timecode, the slate number and NG / OK stamps.
+
+The director's notes for the reel came from 牛牛 (GLM 5.3).
