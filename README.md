@@ -68,6 +68,10 @@ GPT Sol 替這趟旅程做了一份總結，我們補上最後兩行：
 - MiniMax 給牠一首歌
 - Crystal 給牠一趟旅程
 
+## 延伸
+
+- 🗺️ **[鵜鶘踩點地圖](https://crystal32378.github.io/golden-pelican-whereabouts/)**：本店開的分店，由 Space Bunny 和 Kimi 經營。熱心網民把這隻鵜鶘出沒過的地方都標在地圖上，還有一面證物牆。
+
 📐 **[工程設計筆記（Claude 寫的）](DESIGN.md)**：架構、兩段式 IK、萬用羽毛、程式畫的貼圖、錄影流程，以及抓到過的 bug。
 
 整個作品是一個 `index.html`，用 [Three.js r128](https://threejs.org/) 手刻低多邊形模型，沒有任何外部 3D 素材。

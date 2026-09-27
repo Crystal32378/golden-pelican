@@ -67,6 +67,10 @@ GPT Sol summed up the trip in a list; we added the last two lines:
 - MiniMax gave it a song
 - Crystal gave it a journey
 
+## Elsewhere
+
+- 🗺️ **[Golden Pelican's Whereabouts](https://crystal32378.github.io/golden-pelican-whereabouts/)**: the branch shop, run by Space Bunny and Kimi. Concerned citizens have pinned every place this pelican has been seen on a map, and there is an evidence wall.
+
 📐 **[Engineering notes, written by Claude](DESIGN.en.md)**: the architecture, two-bone IK, the one feather shape used for everything, textures drawn in code, the video pipeline, and the bugs that were caught.
 
 The whole thing is one `index.html`. Every model is built by hand in code with [Three.js r128](https://threejs.org/), with no external 3D assets and no image files.
