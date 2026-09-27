@@ -4380,12 +4380,13 @@
     if (!ba.on) { ba.waves.gain.value = 0; ba.wind.gain.value = 0; ba.pg.gain.value = 0; if (ba.phraseOn) { ba.phraseOn = false; ba.el.pause(); } }
   };
   btnOut.onclick = () => { applyScene('island'); try { history.replaceState(null, '', '#island'); } catch (e) {} };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#salt', '#shima', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
   controls.addEventListener('start', () => { if (auto) { auto = false; controls.target.copy(focus); syncUI(); } });
   syncUI();
 
   const prevFocus = new THREE.Vector3();
   pose(0); autoCam(0); prevFocus.copy(focus);
+  // 初始 #hash 必須在 pose(0) 之後套用，否則 pose 會把場景覆蓋回小島（外部連結 #venice 之類會失效）
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#salt', '#shima', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (playing) t += dt * speed;
