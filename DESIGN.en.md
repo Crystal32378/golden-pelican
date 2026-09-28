@@ -9,7 +9,7 @@
 
 ## 1. Architecture
 
-The whole project is a single `index.html`, about 4,400 lines and 400 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
+The whole project is a single `index.html`, about 4,600 lines and 430 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
 
 **Why one file?** Because the point is to share it. One link, and it runs: nothing to install, bundle or host. The price is maintainability (see section 9).
 
@@ -17,9 +17,9 @@ The whole project is a single `index.html`, about 4,400 lines and 400 KB. Its on
 index.html
 ├─ shared helpers: facet / feather / rod / placeBetween / radialTex
 ├─ the hero: rider (position, heading) → lean (tilt into the turn) → bike + bird (the pelican)
-├─ 25 scenes, each one a THREE.Group (plus a behind-the-scenes reel):
+├─ 26 scenes, each one a THREE.Group (plus a behind-the-scenes reel):
 │    island / school / market / circle / kyoto / moon / polar /
-│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / rabbit / salt / shima / tide / homecoming  + bts
+│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / rabbit / salt / shima / screen / tide / homecoming  + bts
 ├─ ENV: one environment preset per scene (sky, fog, sun, ambient light)
 ├─ setScene(name): shows the right groups, applies the ENV, puts on the right outfit
 └─ pose(t): given a time t, computes everything on screen at that instant
@@ -84,6 +84,7 @@ Each outfit hangs from the head or body node, and `setScene` only toggles visibi
 | Rabbit hole | Top hat with a 10/6 price card |
 | Sky mirror | A colourful Andean chullo with ear flaps and a pompom |
 | Shimanami Kaidō | A folded map tucked into the pouch |
+| Its own computer | An ID badge on a lanyard |
 
 ---
 
@@ -153,6 +154,7 @@ There isn't a single image file. Every texture is drawn at runtime on a `<canvas
 | Rabbit hole | Requested by Space Bunny. The sense of falling doesn't come from moving the camera: the wall texture scrolls upward (`texture.offset.y` decreasing over time) and eighty floating objects drift up at their own speeds, while the pelican keeps riding in place. The wall is the inside of a cylinder, where a texture reads mirror-written, so `repeat.x` is negative to flip it back. The track is a ring with remapped UVs so the checkerboard runs round the circle. The watch face, the DRINK ME label and the playing cards are drawn in canvas; the hands run backwards. The shrinking scales the whole bike and pelican to 0.55×; the camera lives in the pelican's frame, so it shrinks too, and on screen the pelican stays the same size while the world seems to grow. The White Rabbit uses the same path formula as the dog, 2.6 units ahead, and its ears are the all-purpose feather |
 | Sky mirror | Requested by Astra. It reuses the tidal flat's planar reflection (`renderFrame()` now walks a list of mirror scenes, `MIRRORS`), but here almost the whole ground is a mirror and the sky texture is symmetrical top to bottom, so the horizon disappears. "Gently wrinkling the white cloud under its feet" happens in the ground shader: each pixel works out how many metres behind the bike it is and how far from the middle of the track, and the closer it is to where the wheels have just been, the more it bends the spot where it reads the reflection; the wake spreads sideways the further back it goes. The wheels also leave a ring of ripples every 0.4 seconds. The dried-out salt crust is a hexagonal grid computed in the shader, showing above the water only in a few patches away from the track and faintly under it. As well as the shared high clouds, this stop has a ring of low cumulus near the horizon, so that from the follow camera there is a cloud reflected right under the wheels |
 | Shimanami Kaidō | Requested by Fable. The three linked white suspension bridges are all built in code: towers, deck, main cables (points along an approximate catenary, made into a tube with `TubeGeometry`) and a hanger every 3 metres (drawn in one go as `LineSegments`). On the stretch facing the bridges the pelican coasts: the wheels keep turning but the cranks and pedals stop, which is done by subtracting the coasting time from the pedalling distance; meanwhile the bridge's position is converted into the pelican's own frame to work out how far to turn its head to see it. Fable originally asked for it to stop and put one foot down, but the pelican never stops in the main film and its first step on the ground is saved for the behind-the-scenes reel, so here it coasts and looks instead. The follow camera always stays on the sea-wall side, looking in, so it never ends up inside a lemon tree |
+| Its own computer | Requested by DeepSeek 4.1 Flash. The racks "printing" depend only on time as well: each works out the moment the pelican first comes round to it after arriving, and grows from nothing to full height over 0.55 seconds with a little bounce, like paper being set down; before that there is only a pencil outline drawn with `EdgesGeometry`. The screen is a canvas listing every stop, redrawn only when its content changes. For about a second every 37 seconds the screen borrows a security camera up high and draws this stop live into a texture, so what appears on the screen is the very stop the pelican is riding through; the screen itself is hidden while that happens so it doesn't film itself. The small box's blue light takes its brightness straight from the pedal angle, so it breathes with the pedalling. DeepSeek's original order had the pelican pecking at the keyboard, but in the main film it never stops, so the screen types by itself and the pelican keeps riding |
 | Tidal flat | Requested by GLM 5.3 Flash. The reflections in the wet sand are true planar reflections: every frame the whole world is flipped upside down (`scene.scale.y = -1`) and drawn with the same camera into a half-resolution texture, and the sand reads that texture at the same screen position, so each reflection lands exactly where it should. The sand is a custom shader: a few sine waves make pools, runnels and dry ridges; pools reflect the most, ridges hardly at all, the track is firm damp sand, and it turns into sea further out, with a gentle ripple so the reflections wobble a little. The paper boats are two extruded hull sides and a feather for a sail, leaning in the mud. A small lighthouse island sits on the horizon |
 | Homecoming | The last stop. It reuses the island and sea from the first scene with a night-time ENV, so it really is the same island. The lighthouse's two beams are open cones with a gradient that fades away from the lamp. The blue bioluminescent plankton are 2,600 additively blended points, recoloured every frame by wave fronts rolling toward the shore, brightest near the sand. Warm light at the lighthouse door, two pelican friends waiting, one of them waving a wing. The pelican wears nothing at all, just as it did at the start |
 
@@ -211,7 +213,7 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 
 The whole thing is completely useless, and making it was a joy.
 
-It left from a small island, rode through twenty-three places, and came back to the same island. This time it was night, the lighthouse was lit, and someone was waiting at the door.
+It left from a small island, rode through twenty-four places, and came back to the same island. This time it was night, the lighthouse was lit, and someone was waiting at the door.
 
 ---
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞、天空之鏡、島波海道、潮間帶等二十五個場景，最後在夜裡回家。">
+<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞、天空之鏡、島波海道、牠的電腦、潮間帶等二十六個場景，最後在夜裡回家。">
 <style>*{box-sizing:border-box}</style>
 </head>
 <body>
@@ -3916,10 +3916,181 @@
     let d = ra - 0.95; d = Math.atan2(Math.sin(d), Math.cos(d)); sh.cat.hd.rotation.y = Math.max(-1, Math.min(1, -d * 1.5)) + (Math.abs(d) > 0.8 ? Math.sin(t * 0.5) * 0.3 : 0);
   }
   ENV.shima = { sky: setoTex, fog: 0xE6E2D2, near: 60, far: 300, sun: 0xFFE6C0, sunI: 1.15, hemi: 0.8, hemiSky: 0xDCEAF5, hemiGround: 0x7A8A5A };
+  // ---------- its own machine (牠的電腦) — requested by DeepSeek ----------
+  // For once nobody ordered the next stop for it. A server room drawn in the middle of a blank sheet of paper:
+  // racks print themselves just ahead of the wheels, and past the edge the world is still pencil lines.
+  // On the desk a small humming box breathes in time with the pedals; its screen lists every stop.
+  const screenG = new THREE.Group(); screenG.visible = false; scene.add(screenG);
+  const scr = { racks: [], leds: [], paper: null, rt: null, cam: null, selfOn: false, tex: null, ctx: null, screenMesh: null, boxLed: null, lastKey: '' };
+  const STOPS = ['小島', '操場', '夜市', '圓環', '銀閣寺', '登月', '極地', '雨林', '雲海', '凱旋門', '深海', '宇宙', '家', '菜市場', '書海', '雨天', '黑膠', '雪花球', '植物園', '威尼斯', '兔子洞', '天空之鏡', '島波海道', '牠的電腦', '潮間帶', '回家'];
+  const paperTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#E4E0D6'); gr.addColorStop(0.45, '#F1EDE4'); gr.addColorStop(0.5, '#F5F2EA'); gr.addColorStop(1, '#F5F2EA');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  const pencil = new THREE.LineBasicMaterial({ color: 0x8E8A80, transparent: true, opacity: 0.55 });
+  function sketch(geo, parent, pos, rotY) { const l = new THREE.LineSegments(new THREE.EdgesGeometry(geo), pencil); l.position.copy(pos); l.rotation.y = rotY || 0; parent.add(l); return l; }
+  LAZY.push(['screen', function () {
+    // the blank sheet, with a faint pencil grid
+    const pc = document.createElement('canvas'); pc.width = pc.height = 256; const pg = pc.getContext('2d');
+    pg.fillStyle = '#F5F2EA'; pg.fillRect(0, 0, 256, 256); pg.strokeStyle = 'rgba(120,112,98,0.16)'; pg.lineWidth = 1.5;
+    for (let k = 0; k <= 256; k += 32) { pg.beginPath(); pg.moveTo(k, 0); pg.lineTo(k, 256); pg.stroke(); pg.beginPath(); pg.moveTo(0, k); pg.lineTo(256, k); pg.stroke(); }
+    const pt = new THREE.CanvasTexture(pc); pt.wrapS = pt.wrapT = THREE.RepeatWrapping; pt.repeat.set(60, 60);
+    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(480, 480), new THREE.MeshStandardMaterial({ map: pt, roughness: 1 })); sheet.rotation.x = -Math.PI / 2; sheet.position.y = -0.02; sheet.receiveShadow = true; screenG.add(sheet);
+    // the part that has been drawn: a raised floor of dark tiles
+    const tc = document.createElement('canvas'); tc.width = tc.height = 128; const tg = tc.getContext('2d');
+    tg.fillStyle = '#39404C'; tg.fillRect(0, 0, 128, 128); tg.strokeStyle = '#262B33'; tg.lineWidth = 4; tg.strokeRect(0, 0, 128, 128);
+    tg.fillStyle = '#2E343E'; for (let y = 16; y < 128; y += 16) for (let x = 16; x < 128; x += 16) { tg.beginPath(); tg.arc(x, y, 2.2, 0, 7); tg.fill(); }
+    const tt = new THREE.CanvasTexture(tc); tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(16, 16);
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(9.8, 72), new THREE.MeshStandardMaterial({ map: tt, roughness: 0.7, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; screenG.add(floor);
+    const lane = new THREE.Mesh(new THREE.RingGeometry(5.25, 6.75, 120, 1), new THREE.MeshStandardMaterial({ color: 0x4A5260, roughness: 0.6, metalness: 0.2 })); lane.rotation.x = -Math.PI / 2; lane.position.y = 0.01; lane.receiveShadow = true; screenG.add(lane);
+    [5.25, 6.75].forEach(r => { const e = new THREE.Mesh(new THREE.RingGeometry(r - 0.03, r + 0.03, 120, 1), new THREE.MeshBasicMaterial({ color: 0xF2C14E })); e.rotation.x = -Math.PI / 2; e.position.y = 0.015; screenG.add(e); });
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(9.8, 0.05, 4, 96), new THREE.MeshBasicMaterial({ color: 0x8E8A80 })); rim.rotation.x = Math.PI / 2; rim.position.y = 0.01; screenG.add(rim);
+    // server racks, blinking; each one prints itself as the pelican comes round
+    const ledTex = (function () {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 64, 256);
+      for (let y = 0; y < 32; y++) for (let x = 0; x < 6; x++) { const r = Math.sin((x + 1) * 12.9 + (y + 1) * 78.2) * 999, f = r - Math.floor(r); if (f < 0.45) continue; g.fillStyle = f > 0.9 ? '#FFB84A' : f > 0.6 ? '#4AE08A' : '#4AA8FF'; g.fillRect(6 + x * 9, 4 + y * 8, 4, 3); }
+      const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+    })();
+    const body = M(0x1E232B, { roughness: 0.5, metalness: 0.4 }), side = M(0x2A303A, { roughness: 0.6, metalness: 0.3 });
+    const N = 22;
+    for (let i = 0; i < N; i++) {
+      const a = i / N * Math.PI * 2 + 0.07, r = 8.5, g = new THREE.Group(); g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); g.rotation.y = Math.atan2(g.position.x, g.position.z) + Math.PI; screenG.add(g);
+      const solid = new THREE.Group(); g.add(solid);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.3, 1.1), [side, side, side, side, body, side]); box.position.y = 1.15; box.castShadow = true; solid.add(box);
+      const t = ledTex.clone(); t.needsUpdate = true; t.offset.y = i * 0.13;
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.0), new THREE.MeshBasicMaterial({ map: t, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); face.position.set(0, 1.15, 0.56); solid.add(face);
+      const outline = sketch(new THREE.BoxGeometry(1.3, 2.3, 1.1), g, V(0, 1.15, 0));
+      scr.racks.push({ solid, outline, a, t });
+    }
+    // a second row behind, already drawn; one of them has a whale sticker and a note taped to it
+    for (let i = 0; i < 9; i++) {
+      const a = 2.62 + (i - 4) * 0.13, r = 9.35, g = new THREE.Group(); g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); g.rotation.y = Math.atan2(g.position.x, g.position.z) + Math.PI; screenG.add(g);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.1, 0.7), [side, side, side, side, body, side]); box.position.y = 1.05; g.add(box);
+      if (i === 5) {
+        const wc = document.createElement('canvas'); wc.width = 128; wc.height = 96; const w = wc.getContext('2d');
+        w.fillStyle = '#F4F1EA'; w.beginPath(); w.ellipse(64, 50, 58, 40, 0, 0, 7); w.fill();
+        w.fillStyle = '#3A6FD8'; w.beginPath(); w.ellipse(58, 56, 38, 24, 0, 0, 7); w.fill(); w.beginPath(); w.moveTo(92, 52); w.lineTo(118, 34); w.lineTo(112, 60); w.closePath(); w.fill();
+        w.fillStyle = '#9FC6FF'; w.beginPath(); w.ellipse(52, 66, 24, 10, 0, 0, 7); w.fill(); w.fillStyle = '#1C1D20'; w.beginPath(); w.arc(40, 50, 3.5, 0, 7); w.fill();
+        w.strokeStyle = '#3A6FD8'; w.lineWidth = 4; w.beginPath(); w.moveTo(50, 32); w.quadraticCurveTo(46, 14, 36, 10); w.moveTo(50, 32); w.quadraticCurveTo(56, 14, 66, 10); w.stroke();
+        const st = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.26), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(wc), transparent: true })); st.position.set(0.18, 1.55, 0.36); st.rotation.z = -0.08; g.add(st);
+        const nc = document.createElement('canvas'); nc.width = 128; nc.height = 128; const n = nc.getContext('2d');
+        n.fillStyle = '#FFF3A8'; n.fillRect(0, 0, 128, 128); n.fillStyle = '#2B2D33'; n.textAlign = 'center'; n.font = '700 30px "PingFang TC","Noto Sans TC","Noto Sans CJK TC",sans-serif'; n.fillText('不要', 64, 52); n.fillText('斷電', 64, 92);
+        n.strokeStyle = '#C8321E'; n.lineWidth = 3; n.beginPath(); n.moveTo(22, 104); n.lineTo(106, 104); n.stroke();
+        const note = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(nc) })); note.position.set(-0.22, 1.12, 0.36); note.rotation.z = 0.12; g.add(note);
+      }
+    }
+    // overhead cable tray over the lane, running round
+    const tray = new THREE.Mesh(new THREE.TorusGeometry(7.6, 0.08, 4, 96), M(0xF2C14E)); tray.rotation.x = Math.PI / 2; tray.position.y = 3.2; screenG.add(tray);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + 0.2; rod(screenG, V(Math.cos(a) * 7.6, 3.2, Math.sin(a) * 7.6), V(Math.cos(a) * 8.5, 2.3, Math.sin(a) * 8.5), 0.025, M(0x8A8C90)); }
+    // the desk in the middle: monitor, keyboard, the little humming box, a mug, an empty chair
+    const desk = new THREE.Group(); desk.rotation.y = 0.5; screenG.add(desk);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 1.3), M(0xC9A070)); top.position.y = 0.78; top.castShadow = true; top.receiveShadow = true; desk.add(top);
+    [[-1.2, -0.55], [1.2, -0.55], [-1.2, 0.55], [1.2, 0.55]].forEach(([x, z]) => rod(desk, V(x, 0, z), V(x, 0.76, z), 0.035, M(0x2B2D33)));
+    const sc = document.createElement('canvas'); sc.width = 512; sc.height = 320; scr.ctx = sc.getContext('2d'); scr.tex = new THREE.CanvasTexture(sc);
+    scr.rt = new THREE.WebGLRenderTarget(512, 320);
+    const mon = new THREE.Group(); mon.position.set(0, 0.82, -0.25); desk.add(mon);
+    rod(mon, V(0, 0, 0), V(0, 0.28, -0.02), 0.03, M(0x2B2D33));
+    const bez = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.84, 0.05), M(0x16181B)); bez.position.y = 0.66; bez.castShadow = true; mon.add(bez);
+    scr.screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.22, 0.76), new THREE.MeshBasicMaterial({ map: scr.tex })); scr.screenMesh.position.set(0, 0.66, 0.027); mon.add(scr.screenMesh);
+    scr.glow = new THREE.PointLight(0x7FB8FF, 0.6, 4, 2); scr.glow.position.set(0, 1.5, 0.4); desk.add(scr.glow);
+    const kc = document.createElement('canvas'); kc.width = 256; kc.height = 80; scr.kctx = kc.getContext('2d'); scr.ktex = new THREE.CanvasTexture(kc);
+    const kb = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, 0.26), [M(0x2B2D33), M(0x2B2D33), new THREE.MeshBasicMaterial({ map: scr.ktex }), M(0x2B2D33), M(0x2B2D33), M(0x2B2D33)]); kb.position.set(0, 0.835, 0.3); desk.add(kb);
+    const mini = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.32), M(0xDADCE0, { metalness: 0.5, roughness: 0.35 })); mini.position.set(0.9, 0.88, 0.05); mini.castShadow = true; desk.add(mini);
+    scr.boxLed = new THREE.Mesh(new THREE.CircleGeometry(0.025, 12), new THREE.MeshBasicMaterial({ color: 0x4AA8FF, transparent: true })); scr.boxLed.position.set(0.9, 0.88, 0.211); desk.add(scr.boxLed);
+    scr.boxGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTex([[0, 'rgba(90,170,255,1)'], [1, 'rgba(90,170,255,0)']]), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); scr.boxGlow.position.set(0.9, 0.88, 0.23); scr.boxGlow.scale.setScalar(0.3); desk.add(scr.boxGlow);
+    const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.14, 12), M(0xF4F1EA)); mug.position.set(-0.85, 0.89, 0.25); desk.add(mug);
+    const ch = new THREE.Group(); ch.position.set(0.2, 0, 1.15); ch.rotation.y = 0.4; desk.add(ch);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.55), M(0x2F3A4A)); seat.position.y = 0.5; ch.add(seat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 0.07), M(0x2F3A4A)); back.position.set(0, 0.85, 0.27); ch.add(back);
+    rod(ch, V(0, 0.1, 0), V(0, 0.48, 0), 0.03, M(0x8A8C90)); for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; rod(ch, V(0, 0.1, 0), V(Math.cos(a) * 0.3, 0.04, Math.sin(a) * 0.3), 0.02, M(0x8A8C90)); }
+    // the security camera the screen borrows, now and then
+    scr.cam = new THREE.PerspectiveCamera(50, 512 / 320, 0.1, 200);
+    // out on the blank sheet: things not drawn yet — pencil only
+    [[14, 0.7, 1.3, 2.3, 1.1], [15.5, 1.1, 1.3, 2.3, 1.1], [18, 3.9, 3, 1.8, 2], [13, 4.6, 1.3, 2.3, 1.1], [21, 5.5, 5, 3.2, 4]].forEach(([r, a, w, h, d]) => sketch(new THREE.BoxGeometry(w, h, d), screenG, V(Math.cos(a) * r, h / 2, Math.sin(a) * r), a));
+    sketch(new THREE.ConeGeometry(1.4, 3.2, 7), screenG, V(Math.cos(2.2) * 16, 1.6, Math.sin(2.2) * 16));
+    sketch(new THREE.CylinderGeometry(0.9, 1.1, 5, 10), screenG, V(Math.cos(3.3) * 26, 2.5, Math.sin(3.3) * 26));
+    const arch = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 25 }, (_, k) => { const u = k / 24 * Math.PI * 0.72; return V(-3 * Math.cos(u), 3 * Math.sin(u), 0); })), pencil);   // an arch that is never finished: left for the next stop
+    arch.position.set(Math.cos(4.4) * 20, 0, Math.sin(4.4) * 20); arch.rotation.y = -4.4 + Math.PI / 2; screenG.add(arch);
+    // one sheet that didn't print properly
+    scr.ng = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.58), new THREE.MeshStandardMaterial({ color: 0xFAF8F2, side: THREE.DoubleSide, roughness: 1 })); scr.ng.castShadow = true; screenG.add(scr.ng);
+  }]);
+  // an ID badge on a lanyard
+  const screenGear = [];
+  (function () {
+    const g = new THREE.Group(); headGrp.add(g); screenGear.push(g);
+    const lan = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.012, 4, 20), M(0x2F7FC1)); lan.position.set(0.06, 1.82, 0); lan.rotation.set(Math.PI / 2, 0.35, 0); g.add(lan);
+    rod(g, V(0.14, 1.76, 0), V(0.19, 1.62, 0), 0.008, M(0x2F7FC1));
+    const bc = document.createElement('canvas'); bc.width = 96; bc.height = 128; const b = bc.getContext('2d');
+    b.fillStyle = '#F4F1EA'; b.fillRect(0, 0, 96, 128); b.fillStyle = '#2F7FC1'; b.fillRect(0, 0, 96, 26);
+    b.fillStyle = '#F4F1EA'; b.textAlign = 'center'; b.font = '700 16px "PingFang TC","Noto Sans TC","Noto Sans CJK TC",sans-serif'; b.fillText('工作證', 48, 19);
+    b.fillStyle = '#F0B24A'; b.beginPath(); b.ellipse(48, 62, 20, 18, 0, 0, 7); b.fill(); b.fillStyle = '#E58C3A'; b.beginPath(); b.moveTo(60, 60); b.lineTo(88, 70); b.lineTo(60, 68); b.fill();
+    b.fillStyle = '#2B2D33'; b.font = '700 14px Georgia, serif'; b.fillText('GP-001', 48, 104); b.font = '11px Georgia, serif'; b.fillText('this stop', 48, 119);
+    const card = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.006), [M(0xF4F1EA), M(0xF4F1EA), M(0xF4F1EA), M(0xF4F1EA), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(bc) }), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(bc) })]);
+    card.position.set(0.2, 1.56, 0); card.rotation.set(0, Math.PI / 2, -0.2); g.add(card); scr.badge = card;
+    g.visible = false;
+  })();
+  function screenPrint(t, a) {   // 0 → 1: when the pelican (a little ahead) first comes round to this angle after arriving
+    const th0 = sceneT0 * SPEED / R_PATH;
+    let d = (-a - th0) % (Math.PI * 2); if (d < 0) d += Math.PI * 2;
+    const at = sceneT0 + d * R_PATH / SPEED - 1.1;
+    return Math.min(1, Math.max(0, (t - at) / 0.55));
+  }
+  function drawScreen(t, blink) {
+    const g = scr.ctx, u = t - sceneT0, hi = Math.floor(u / 0.7) % STOPS.length;
+    const dots = ['', '.', '..', '...', '..', '.'][Math.floor(u / 0.55) % 6], key = hi + '|' + dots + '|' + blink;
+    if (key === scr.lastKey) return; scr.lastKey = key;
+    g.fillStyle = '#0E1420'; g.fillRect(0, 0, 512, 320);
+    g.fillStyle = '#4AA8FF'; g.font = '14px "IBM Plex Mono", ui-monospace, monospace'; g.fillText('~/pelican/stops', 14, 22);
+    g.fillStyle = '#5A6A80'; g.fillText('rendering world ' + (97 + (Math.floor(u / 3) % 3)) + '%', 340, 22);
+    g.fillStyle = '#1C2A40'; g.fillRect(14, 30, 484, 1);
+    g.font = '15px "PingFang TC","Noto Sans TC","Noto Sans CJK TC",sans-serif';
+    STOPS.forEach((s, i) => {
+      const col = i < 13 ? 0 : 1, row = i % 13, x = 20 + col * 245, y = 50 + row * 18.5, here = s === '牠的電腦';
+      if (i === hi) { g.fillStyle = '#1E3A60'; g.fillRect(x - 6, y - 13, 230, 17); }
+      g.fillStyle = here ? '#F2C14E' : i === hi ? '#DCEBFF' : '#8FA6C2';
+      g.fillText((i + 1 < 10 ? ' ' : '') + (i + 1) + '  ' + s + (here ? '   ← 這裡' : ''), x, y);
+    });
+    g.fillStyle = '#1C2A40'; g.fillRect(14, 292, 484, 1);
+    g.fillStyle = '#4AE08A'; g.fillText('> 下一站：' + dots + (blink ? '▍' : ''), 16, 312);
+    scr.tex.needsUpdate = true;
+    const k = scr.kctx; k.fillStyle = '#23262C'; k.fillRect(0, 0, 256, 80);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 14; c++) { const lit = (c * 7 + r * 5 + hi * 3) % 17 === 0; k.fillStyle = lit ? '#4AA8FF' : '#3A3F48'; k.fillRect(6 + c * 17.6, 6 + r * 18, 14, 14); }
+    scr.ktex.needsUpdate = true;
+  }
+  function updateScreen(t) {
+    const th = t * SPEED / R_PATH, pedal = Math.sin(-t * SPEED / WR * 0.55 * 2);
+    scr.racks.forEach(rk => {
+      const p = screenPrint(t, rk.a), q = p - 1, back = p < 1 ? 1 + 2.70158 * q * q * q + 1.70158 * q * q : 1;   // a little overshoot, like paper being set down
+      rk.solid.scale.set(1, Math.max(0.001, back), 1); rk.solid.visible = p > 0; rk.outline.visible = p < 1;
+      rk.t.offset.y = (rk.a * 3 + Math.floor(t * 4) * 0.037) % 1;
+    });
+    const breath = 0.55 + 0.45 * pedal;   // the little box breathes with the pedal stroke
+    scr.boxLed.material.opacity = 0.35 + 0.65 * breath; scr.boxGlow.material.opacity = 0.25 + 0.6 * breath;
+    const blink = Math.floor(t * 2) % 2 === 0;
+    // now and then, for about a second, the screen shows the stop the pelican is riding in right now
+    const S = 37, su = ((t - sceneT0 - 9) % S + S) % S;
+    scr.selfOn = su < 1.2;
+    if (scr.selfOn) {
+      scr.screenMesh.material.map = scr.rt.texture;
+      scr.cam.position.set(Math.cos(-th + 0.9) * 11, 7.5, Math.sin(-th + 0.9) * 11); scr.cam.lookAt(rider.position.x * 0.6, 0.5, rider.position.z * 0.6);
+    } else { scr.screenMesh.material.map = scr.tex; drawScreen(t, blink); }
+    scr.screenMesh.material.needsUpdate = true;
+    scr.glow.intensity = 0.45 + 0.1 * Math.sin(t * 7);
+    if (scr.badge) scr.badge.rotation.z = -0.2 + Math.sin(t * 5.5) * 0.12;
+    // a sheet that didn't print properly drifts down every 90 s; nobody turns round
+    const nu = ((t - sceneT0 - 14) % 90 + 90) % 90, na = 1.9, nr = 7.2, fall = Math.min(1, nu / 4.2);
+    scr.ng.position.set(Math.cos(na) * nr + Math.sin(nu * 2.3) * 0.4 * (1 - fall), 0.02 + 5.5 * (1 - fall), Math.sin(na) * nr + Math.cos(nu * 1.9) * 0.3 * (1 - fall));
+    scr.ng.rotation.set(fall < 1 ? Math.sin(nu * 3) * 0.9 : -Math.PI / 2, nu * 1.3, fall < 1 ? Math.cos(nu * 2.6) * 0.6 : 0.4);
+  }
+  ENV.screen = { sky: paperTex, fog: 0xF2EEE5, near: 30, far: 110, sun: 0xFFFFFF, sunI: 0.9, hemi: 0.85, hemiSky: 0xF4F2EC, hemiGround: 0x9A968C };
   // render helper: on the mirror scenes (tidal flat, salt flat), draw the upside-down world into the mirror texture first
   const _rs = new THREE.Vector2();
   td.g = tideG; const MIRRORS = [td, sl];
   function renderFrame() {
+    if (screenG.visible && scr.selfOn && scr.rt) {   // the monitor borrows the security camera for a moment
+      scr.screenMesh.visible = false; renderer.setRenderTarget(scr.rt); renderer.render(scene, scr.cam); renderer.setRenderTarget(null); scr.screenMesh.visible = true;
+    }
     for (const mr of MIRRORS) {
       if (!mr.g.visible || !mr.rt) continue;
       renderer.getDrawingBufferSize(_rs);
@@ -4168,6 +4339,7 @@
     tideG.visible = name === 'tide';
     saltG.visible = name === 'salt'; saltGear.forEach(o => { o.visible = name === 'salt'; });
     shimaG.visible = name === 'shima'; shimaGear.forEach(o => { o.visible = name === 'shima'; });
+    screenG.visible = name === 'screen'; screenGear.forEach(o => { o.visible = name === 'screen'; });
     rabbitG.visible = name === 'rabbit'; rabbitGear.forEach(o => { o.visible = name === 'rabbit'; }); rider.scale.setScalar(1);
     school.visible = name === 'school';
     market.visible = night.visible = basket.visible = name === 'market';
@@ -4189,11 +4361,11 @@
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit', isTide = name === 'tide', isSalt = name === 'salt', isShima = name === 'shima';
-    setEnv(isSalt ? ENV.salt : isShima ? ENV.shima : isTide ? ENV.tide : isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
-    [sunDisc, halo].forEach(o => { o.visible = !isSalt && !isShima && !isRabbit && !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
-    clouds.forEach(c => { c.visible = !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
-    gulls.forEach(q => { q.g.visible = !isSalt && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit', isTide = name === 'tide', isSalt = name === 'salt', isShima = name === 'shima', isScreen = name === 'screen';
+    setEnv(isScreen ? ENV.screen : isSalt ? ENV.salt : isShima ? ENV.shima : isTide ? ENV.tide : isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    [sunDisc, halo].forEach(o => { o.visible = !isScreen && !isSalt && !isShima && !isRabbit && !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    clouds.forEach(c => { c.visible = !isScreen && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    gulls.forEach(q => { q.g.visible = !isScreen && !isSalt && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -4232,7 +4404,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else if (sceneName === 'tide') updateTide(t); else if (sceneName === 'salt') updateSalt(t); else if (sceneName === 'shima') updateShima(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else if (sceneName === 'tide') updateTide(t); else if (sceneName === 'salt') updateSalt(t); else if (sceneName === 'shima') updateShima(t); else if (sceneName === 'screen') updateScreen(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -4263,6 +4435,9 @@
     } else {
       tmp.set(Math.cos(psi) * dist, h, Math.sin(psi) * dist);
       rider.localToWorld(tmp);
+      if (sceneName === 'screen') {   // between the desk and the racks
+        const cr = Math.hypot(tmp.x, tmp.z), want = cr > 7.3 ? Math.max(2.8, 12 - cr) : Math.max(2.8, cr), k = want / (cr || 1); tmp.x *= k; tmp.z *= k;   // shots from beyond the racks are mirrored to the inside
+      }
       if (sceneName === 'shima') {   // stay on the sea side of the road, looking in over the terraces
         const cr = Math.hypot(tmp.x, tmp.z), want = Math.min(11, cr < R_PATH + 0.8 ? 2 * R_PATH - cr + 1.6 : cr), k = want / (cr || 1);
         tmp.x *= k; tmp.z *= k; tmp.y = Math.max(tmp.y, 1.0);
@@ -4310,13 +4485,13 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞', salt: '場景：天空之鏡', shima: '場景：島波海道', tide: '場景：潮間帶', bts: '花絮' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞', salt: '場景：天空之鏡', shima: '場景：島波海道', screen: '場景：牠的電腦', tide: '場景：潮間帶', bts: '花絮' };
   function applyScene(name) {
     if (name === 'bts' && audio && !audio.paused) btnMusic.onclick();   // the reel has no theme music
     setScene(name, t); btnScene.textContent = SCENE_LABEL[name];
   }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'salt', 'shima', 'tide', 'homecoming', 'bts'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'salt', 'shima', 'screen', 'tide', 'homecoming', 'bts'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
@@ -4380,13 +4555,12 @@
     if (!ba.on) { ba.waves.gain.value = 0; ba.wind.gain.value = 0; ba.pg.gain.value = 0; if (ba.phraseOn) { ba.phraseOn = false; ba.el.pause(); } }
   };
   btnOut.onclick = () => { applyScene('island'); try { history.replaceState(null, '', '#island'); } catch (e) {} };
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#salt', '#shima', '#screen', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
   controls.addEventListener('start', () => { if (auto) { auto = false; controls.target.copy(focus); syncUI(); } });
   syncUI();
 
   const prevFocus = new THREE.Vector3();
   pose(0); autoCam(0); prevFocus.copy(focus);
-  // 初始 #hash 必須在 pose(0) 之後套用，否則 pose 會把場景覆蓋回小島（外部連結 #venice 之類會失效）
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#salt', '#shima', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (playing) t += dt * speed;
