@@ -4104,6 +4104,7 @@
     for (let i = 0; i < 50; i++) { const a = i * 2.39996, r = 7.3 + (i % 5) * 0.5; facet(baganG, M(i % 2 ? 0x9A7A58 : 0x7E7450), V(Math.cos(a) * r, 0.08, Math.sin(a) * r), [0.2, 0.1, 0.17], [0, i, 0], 0); }
     // the temple: white walls, four porches, three terraces with little stupas at the corners, a golden spire
     const white = M(0xF1ECE0, { roughness: 0.8 }), white2 = M(0xE6DFCF, { roughness: 0.85 }), gold = new THREE.MeshStandardMaterial({ color: 0xE3B04A, metalness: 0.65, roughness: 0.3, flatShading: true, emissive: 0x3A2206 });
+    bg.gold = gold; bg.earth = earth.material;
     const tp = new THREE.Group(); baganG.add(tp);
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.35, 6.4), white2); plinth.position.y = 0.17; plinth.castShadow = plinth.receiveShadow = true; tp.add(plinth);
     const hall = new THREE.Mesh(new THREE.BoxGeometry(5.6, 2.0, 5.6), white); hall.position.y = 1.35; hall.castShadow = hall.receiveShadow = true; tp.add(hall);
@@ -4141,9 +4142,14 @@
     const NS = 320, NT = 110;
     const stupas = new THREE.InstancedMesh(stupaGeo, brick, NS), bases = new THREE.InstancedMesh(baseGeo, brick, NT), towers = new THREE.InstancedMesh(towerGeo, brick, NT);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), col = new THREE.Color();
-    const place = (i, im, a, r, s, ry, shade) => { q.setFromAxisAngle(UP, ry); sv.setScalar(s); m4.compose(V(Math.cos(a) * r, 0, Math.sin(a) * r), q, sv); im.setMatrixAt(i, m4); col.setHSL(0.045 + shade * 0.02, 0.5 - shade * 0.15, 0.36 + shade * 0.1); im.setColorAt(i, col); };
+    const sunXZ = V(bg.sunDir.x, 0, bg.sunDir.z).normalize();
+    const place = (i, im, a, r, s, ry, shade) => { q.setFromAxisAngle(UP, ry); sv.setScalar(s); m4.compose(V(Math.cos(a) * r, 0, Math.sin(a) * r), q, sv); im.setMatrixAt(i, m4); col.setHSL(0.045 + shade * 0.02, 0.5 - shade * 0.15, 0.36 + shade * 0.1); im.setColorAt(i, col);
+      if (!im.userData.base) { im.userData.base = []; im.userData.thr = []; }
+      const east = (Math.cos(a) * sunXZ.x + Math.sin(a) * sunXZ.z) * Math.min(1, r / 120), rnd = Math.sin(i * 91.7 + r) * 0.5 + 0.5;   // east side and tall ones catch the light first
+      im.userData.base[i] = col.clone(); im.userData.thr[i] = 0.18 + 0.55 * (0.5 - east * 0.5) + rnd * 0.18 - Math.min(0.12, s * 0.03); };
     for (let i = 0; i < NS; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, a = (u - Math.floor(u)) * Math.PI * 2, r = 11 + Math.pow(v - Math.floor(v), 0.8) * 150; place(i, stupas, a, r, 0.6 + ((i * 7) % 10) * 0.16 + (r > 60 ? 0.6 : 0), i, (i % 5) / 5); }
     for (let i = 0; i < NT; i++) { const u = Math.sin(i * 39.42 + 3) * 9631.7, v = Math.sin(i * 17.7 + 1) * 4213.3, a = (u - Math.floor(u)) * Math.PI * 2, r = 16 + Math.pow(v - Math.floor(v), 0.9) * 140, s = 0.9 + ((i * 3) % 7) * 0.25 + (r > 70 ? 0.8 : 0); place(i, bases, a, r, s, a, (i % 4) / 4); place(i, towers, a, r, s, a, (i % 4) / 4); }
+    bg.inst = [stupas, bases, towers];
     [stupas, bases, towers].forEach(im => { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; im.castShadow = false; im.receiveShadow = true; baganG.add(im); });
     // one big brick temple nearby, and a gold-topped white stupa further off
     const big = new THREE.Group(); big.position.set(-18, 0, -12); big.rotation.y = 0.4; baganG.add(big);
@@ -4163,9 +4169,14 @@
     for (let i = 0; i < 70; i++) { const x = (i * 97) % 256, y = (i * 61) % 256, r = 30 + (i % 5) * 14, gr = mg.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,236,220,0.5)'); gr.addColorStop(1, 'rgba(255,236,220,0)'); mg.fillStyle = gr; mg.fillRect(0, 0, 256, 256); }
     const mt = new THREE.CanvasTexture(mc); mt.wrapS = mt.wrapT = THREE.RepeatWrapping; mt.repeat.set(10, 10);
     [[0.9, 0.55], [2.4, 0.35]].forEach(([y, o], k) => { const m = new THREE.Mesh(new THREE.RingGeometry(12 + k * 6, 260, 64, 1), new THREE.MeshBasicMaterial({ map: mt, transparent: true, opacity: o, depthWrite: false, color: 0xFFE8D8 })); m.rotation.x = -Math.PI / 2; m.position.y = y; baganG.add(m); bg['mist' + k] = m; });
+    // dust hanging in the dry morning air: invisible in the dark, glowing once the sun reaches it
+    { const n = 500, pp = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.sin(i * 12.9898) * 43758.5453, v = Math.sin(i * 78.233) * 12543.1, w = Math.sin(i * 39.42) * 9631.7, a = (u - Math.floor(u)) * Math.PI * 2, vf = v - Math.floor(v), r = vf < 0.3 ? 2 + vf * 10 : 12 + (vf - 0.3) * 26; pp.set([Math.cos(a) * r, 0.2 + (w - Math.floor(w)) * 6, Math.sin(a) * r], i * 3); }
+      const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
+      bg.dust = new THREE.Points(dg, new THREE.PointsMaterial({ map: radialTex([[0, 'rgba(255,235,190,1)'], [1, 'rgba(255,220,160,0)']]), size: 0.07, color: 0xFFE2B0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      bg.dust.userData.base = pp.slice(); bg.dust.frustumCulled = false; baganG.add(bg.dust); }
     // the sun, just clear of the horizon
-    const sd = new THREE.Mesh(new THREE.CircleGeometry(12, 48), new THREE.MeshBasicMaterial({ color: 0xFFE2A8, fog: false })); sd.position.copy(bg.sunDir).multiplyScalar(340); sd.lookAt(0, 0, 0); baganG.add(sd);
-    const sh = new THREE.Mesh(new THREE.PlaneGeometry(170, 170), new THREE.MeshBasicMaterial({ map: radialTex([[0, 'rgba(255,230,180,0.95)'], [0.25, 'rgba(255,190,130,0.4)'], [1, 'rgba(255,170,120,0)']]), transparent: true, depthWrite: false, fog: false })); sh.position.copy(bg.sunDir).multiplyScalar(345); sh.lookAt(0, 0, 0); baganG.add(sh);
+    const sd = new THREE.Mesh(new THREE.CircleGeometry(12, 48), new THREE.MeshBasicMaterial({ color: 0xFFE2A8, fog: false })); sd.position.copy(bg.sunDir).multiplyScalar(340); sd.lookAt(0, 0, 0); baganG.add(sd); bg.sd = sd;
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(170, 170), new THREE.MeshBasicMaterial({ map: radialTex([[0, 'rgba(255,230,180,0.95)'], [0.25, 'rgba(255,190,130,0.4)'], [1, 'rgba(255,170,120,0)']]), transparent: true, depthWrite: false, fog: false })); sh.position.copy(bg.sunDir).multiplyScalar(345); sh.lookAt(0, 0, 0); baganG.add(sh); bg.sh = sh;
     // hot-air balloons going up
     const cols = [['#C8321E', '#E8702E'], ['#D9A43A', '#C8321E'], ['#B8322A', '#F2C14E'], ['#E07A3A', '#F4E6C8'], ['#C8321E', '#2F5F8A'], ['#D98A2E', '#8C2F39']];
     const envPts = [[0.001, 0], [0.25, 0.05], [0.55, 0.35], [0.9, 0.95], [1.12, 1.6], [1.18, 2.15], [1.05, 2.7], [0.72, 3.1], [0.35, 3.3], [0.001, 3.35]];
@@ -4178,7 +4189,7 @@
       [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(([x, z]) => rod(b, V(x, 0.3, z), V(x * 1.6, 1.15, z * 1.6), 0.008, M(0x3A2E24)));
       const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTex([[0, 'rgba(255,230,160,1)'], [0.4, 'rgba(255,150,60,0.6)'], [1, 'rgba(255,120,40,0)']]), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); flame.position.y = 0.75; flame.scale.setScalar(0.6); b.add(flame);
       const s = 2.6 + (i % 4) * 0.5; b.scale.setScalar(s); baganG.add(b);
-      bg.balloons.push({ b, flame, a: 0.4 + i * 0.47, r: 26 + (i % 5) * 11, y0: 3 + (i % 6) * 5.5, ph: i * 1.7, rise: i % 4 === 0 });
+      bg.balloons.push({ env, b, flame, a: 0.4 + i * 0.47, r: 26 + (i % 5) * 11, y0: 3 + (i % 6) * 5.5, ph: i * 1.7, rise: i % 4 === 0 });
     }
   }]);
   // a string of jasmine hung on the handlebar
@@ -4191,7 +4202,37 @@
     [-1, 1].forEach(s => { const r = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.03), M(0xC8321E)); r.position.set(BAR.x + 0.02, BAR.y - 0.1, s * 0.2); g.add(r); });
     g.visible = false;
   })();
+  const _c1 = new THREE.Color(), _dark = new THREE.Color(0x2A2438), _goldTint = new THREE.Color(0xFFC060), _skyDark = new THREE.Color(0x3A3E60), _white = new THREE.Color(0xFFFFFF);
+  const _fogDark = new THREE.Color(0x3E3A52), _fogLit = new THREE.Color(ENV.bagan ? 0xF0C4A4 : 0xF0C4A4), _earthDark = new THREE.Color(0x4A3A3A), _earthLit = new THREE.Color(0xB27A52);
+  function baganDawn(t) {   // the sun comes up over about two laps: the gold spire first, then the plain, patch by patch, from the east
+    const p = Math.min(1, Math.max(0, (t - sceneT0) / 44)), e = sm(p, 0, 1);
+    sun.intensity = 0.04 + 1.21 * sm(p, 0.1, 0.8); sun.color.setHex(0xFF9A58).lerp(_c1.setHex(0xFFB478), sm(p, 0.4, 1));
+    hemi.intensity = 0.2 + 0.42 * e;
+    scene.userData.sky.material.color.copy(_skyDark).lerp(_white, sm(p, 0, 0.7));
+    scene.fog.color.copy(_fogDark).lerp(_fogLit, sm(p, 0.05, 0.75));
+    bg.earth.color.copy(_earthDark).lerp(_earthLit, sm(p, 0.15, 0.85));
+    bg.sd.position.copy(bg.sunDir).multiplyScalar(340); bg.sd.position.y -= (1 - sm(p, 0, 0.55)) * 40; bg.sh.position.y = bg.sd.position.y * 1.015;
+    bg.sh.material.opacity = sm(p, 0.05, 0.6);
+    bg.gold.emissive.setHex(0x3A2206).lerp(_c1.setHex(0xC07A20), sm(p, 0.02, 0.12) * (1 - sm(p, 0.55, 1)));   // the spire catches the first light
+    if (!bg.done || p < 1) {
+      bg.inst.forEach(im => {
+        for (let i = 0; i < im.count; i++) {
+          const th = im.userData.thr[i], k = sm(p, th, th + 0.08), glow = k * (1 - sm(p, th + 0.1, th + 0.3));   // lit: a flush of gold, then brick
+          _c1.copy(_dark).lerp(im.userData.base[i], k).lerp(_goldTint, glow * 0.55); im.setColorAt(i, _c1);
+        }
+        im.instanceColor.needsUpdate = true;
+      });
+      bg.balloons.forEach(o => { const k = sm(p, 0.28 - Math.min(0.2, o.y0 * 0.006), 0.5); o.env.material.color.copy(_c1.setHex(0x3A3440)).lerp(_white, k); });
+      bg.done = p >= 1;
+    }
+    [bg.mist0, bg.mist1].forEach((m, k) => { m.material.color.setHex(0x4A4460).lerp(_c1.setHex(0xFFE8D8), sm(p, 0.1, 0.8)); m.material.opacity = (k ? 0.35 : 0.55) * (0.5 + 0.5 * e); });   // the mist turns from blue-grey to peach
+    bg.dust.material.opacity = 0.85 * sm(p, 0.35, 0.8);
+    const dp = bg.dust.geometry.attributes.position, db = bg.dust.userData.base;
+    for (let i = 0; i < dp.count; i++) dp.setXYZ(i, db[i * 3] + Math.sin(t * 0.13 + i) * 0.5, db[i * 3 + 1] + Math.sin(t * 0.21 + i * 1.7) * 0.25, db[i * 3 + 2] + Math.cos(t * 0.11 + i * 0.7) * 0.5);
+    dp.needsUpdate = true;
+  }
   function updateBagan(t) {
+    baganDawn(t);
     bg.balloons.forEach(o => {
       const a = o.a + t * 0.006, lift = o.rise ? Math.min(14, ((t * 0.12 + o.ph) % 40)) : 0;   // a few are still going up; the rest drift
       o.b.position.set(Math.cos(a) * o.r, o.y0 + lift + Math.sin(t * 0.3 + o.ph) * 0.4, Math.sin(a) * o.r);
@@ -4459,7 +4500,8 @@
     shimaG.visible = name === 'shima'; shimaGear.forEach(o => { o.visible = name === 'shima'; });
     screenG.visible = name === 'screen'; screenGear.forEach(o => { o.visible = name === 'screen'; });
     baganG.visible = name === 'bagan'; baganGear.forEach(o => { o.visible = name === 'bagan'; });
-    if (name === 'bagan') sun.position.set(-21, 5.5, 14); else sun.position.set(-22, 15, 13);   // a low sunrise sun for Bagan only
+    if (name === 'bagan') { sun.position.set(-21, 5.5, 14); bg.done = false; } else sun.position.set(-22, 15, 13);   // a low sunrise sun for Bagan only
+    scene.userData.sky.material.color.set(0xFFFFFF);
     rabbitG.visible = name === 'rabbit'; rabbitGear.forEach(o => { o.visible = name === 'rabbit'; }); rider.scale.setScalar(1);
     school.visible = name === 'school';
     market.visible = night.visible = basket.visible = name === 'market';
