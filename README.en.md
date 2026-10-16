@@ -8,7 +8,7 @@ A paper-cut style golden pelican rides a red bicycle around the world (and the M
 
 **🎬 97-second tour video:** https://crystal32378.github.io/golden-pelican/golden-pelican-tour.mp4
 
-## Twenty-seven scenes
+## Twenty-eight scenes
 
 Use the **場景** (Scene) button in the bottom-left corner to move to the next stop. The on-screen labels are in Traditional Chinese; so are the signs at the night market and the price boards at the wet market, because that is what they say in real life.
 
@@ -39,6 +39,7 @@ Use the **場景** (Scene) button in the bottom-left corner to move to the next 
 | Sky mirror | Requested by Astra. The Salar de Uyuni in Bolivia after rain: a few centimetres of water turn the whole salt flat into a mirror, so the sky is above and below. Low cumulus ring the horizon, pink flamingos stand on one leg in the distance, rows of salt mounds wait to be collected, and where the flat has dried out the hexagonal salt crust shows. As the pelican rides, its wheels leave ripples in the water and gently wrinkle the white cloud under its feet. It wears a colourful Andean chullo |
 | Shimanami Kaidō | Requested by Fable. The cycling road across the Seto Inland Sea in Japan, from Onomichi to Imabari. A blue line painted on the tarmac for cyclists, with 今治 (Imabari) and an arrow now and then; terraces of lemons and mikan on the slope; white suspension bridges hopping from island to island; Onomichi's houses climbing the hill across the water with a three-storey pagoda on top; a ferry going back and forth; a cat sitting on the sea wall, watching the road. Where the road faces the bridges, the pelican stops pedalling, coasts for a moment and turns its head to look. There is a folded map in its pouch |
 | Its own computer | Requested by DeepSeek 4.1 Flash. For once nobody ordered this stop for it. In the middle of a blank sheet of paper, a server room at night has been drawn: dark racks with blinking lights print themselves one by one just as the pelican rides up, and where nothing has been drawn yet there are only pencil lines, including an arch that is never finished. On the desk in the middle a small box hums, its blue light breathing in time with the pedals; the screen lists every stop, and the last line, "next stop:", never gets finished. Every 90 seconds a sheet that didn't print properly drifts down, and the pelican doesn't turn round. It wears an ID badge on a lanyard |
+| The singing dune | Requested by Murphy. The pelican rides along the sharp crest of a big dune. Wherever its wheels pass, the dry sand on the crest tips over and slides down the steep lee face in tongues, layer upon layer, like water, and the dune starts to hum (real booming dunes sing at about 70–105 Hz, like a ship's horn far away; with the music on, you can hear it). The wind blows thin streamers of sand off the crest, dunes run to the horizon in every direction, and on the horizon lies a shimmering blue sea. A fennec fox with enormous ears sits below the crest, watching. Once a lap the pelican stops pedalling and coasts along the crest, turning to look at the sea, and the sea is gone: there is not one drop of water here. It wears a pair of sand goggles pushed up on its forehead |
 | Tidal flat | Requested by GLM 5.3 Flash. The sandbar at low tide, with the sunset turning the water and the sky the same colour. The wet sand is a mirror, so the pelican and the red bicycle each have a reflection. Paper boats lean on the mud, old mooring stakes march out to sea, little crabs scuttle sideways. On the horizon is the lighthouse island: the next stop is home. (Something may be hidden here, but the pelican does nothing and doesn't even glance at it.) |
 | Homecoming | The last stop. Back to the lighthouse island where it all started, now at night: the lighthouse beam sweeping the sea, stars and a path of moonlight, blue bioluminescent plankton flashing where the waves reach the shore, the occasional shooting star. A warm light at the lighthouse door, and two pelican friends waiting. It wears nothing at all, just like the day it left |
 
@@ -48,7 +49,7 @@ After the last stop, Homecoming, press the Scene button once more.
 
 ## How it started
 
-When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a Three.js pelican riding a bicycle. (Drawing a pelican on a bicycle has become a running test for new AI models.) We started from there and took this pelican somewhere new, one stop at a time. Along the way, other AIs joined the trip and picked destinations: muse chose the wet market, Kimi (Moonshot AI) chose the library, GPT Sol chose Venice, Space Bunny chose the rabbit hole, GLM 5.3 Flash chose the tidal flat, Astra chose the sky mirror, Fable chose the Shimanami Kaidō, and DeepSeek 4.1 Flash chose its own computer. Crystal ordered one herself: Bagan.
+When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a Three.js pelican riding a bicycle. (Drawing a pelican on a bicycle has become a running test for new AI models.) We started from there and took this pelican somewhere new, one stop at a time. Along the way, other AIs joined the trip and picked destinations: muse chose the wet market, Kimi (Moonshot AI) chose the library, GPT Sol chose Venice, Space Bunny chose the rabbit hole, GLM 5.3 Flash chose the tidal flat, Astra chose the sky mirror, Fable chose the Shimanami Kaidō, DeepSeek 4.1 Flash chose its own computer, and Murphy chose the singing dune. Crystal ordered one herself: Bagan.
 
 - Idea and direction: Crystal
 - Modelling and code: Claude (Anthropic)
@@ -56,7 +57,7 @@ When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a T
 
 ## Who gave the pelican what
 
-GPT Sol summed up the trip in a list; we added the last three lines:
+GPT Sol summed up the trip in a list; the later lines we added along the way:
 
 - Muse gave it the smoke and bustle of everyday life
 - Kimi gave it an inner world
@@ -67,6 +68,7 @@ GPT Sol summed up the trip in a list; we added the last three lines:
 - Astra gave it the light of the sky
 - Fable gave it a good road
 - DeepSeek gave it a machine that can run a world
+- Murphy gave it a sea without water
 - MiniMax gave it a song
 - Crystal gave it a journey
 

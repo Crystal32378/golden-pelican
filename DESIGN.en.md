@@ -9,7 +9,7 @@
 
 ## 1. Architecture
 
-The whole project is a single `index.html`, about 4,700 lines and 440 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
+The whole project is a single `index.html`, about 4,900 lines and 460 KB. Its only dependency is **Three.js r128**, plus `OrbitControls` so you can drag the camera.
 
 **Why one file?** Because the point is to share it. One link, and it runs: nothing to install, bundle or host. The price is maintainability (see section 9).
 
@@ -17,9 +17,9 @@ The whole project is a single `index.html`, about 4,700 lines and 440 KB. Its on
 index.html
 ├─ shared helpers: facet / feather / rod / placeBetween / radialTex
 ├─ the hero: rider (position, heading) → lean (tilt into the turn) → bike + bird (the pelican)
-├─ 27 scenes, each one a THREE.Group (plus a behind-the-scenes reel):
+├─ 28 scenes, each one a THREE.Group (plus a behind-the-scenes reel):
 │    island / school / market / circle / kyoto / moon / polar /
-│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / rabbit / bagan / salt / shima / screen / tide / homecoming  + bts
+│    jungle / sky / paris / ocean / space / home / wetmarket / library / rain / vinyl / globe / garden / venice / rabbit / bagan / salt / shima / screen / dune / tide / homecoming  + bts
 ├─ ENV: one environment preset per scene (sky, fog, sun, ambient light)
 ├─ setScene(name): shows the right groups, applies the ENV, puts on the right outfit
 └─ pose(t): given a time t, computes everything on screen at that instant
@@ -86,6 +86,7 @@ Each outfit hangs from the head or body node, and `setScene` only toggles visibi
 | Sky mirror | A colourful Andean chullo with ear flaps and a pompom |
 | Shimanami Kaidō | A folded map tucked into the pouch |
 | Its own computer | An ID badge on a lanyard |
+| The singing dune | Sand goggles pushed up on its forehead |
 
 ---
 
@@ -157,6 +158,7 @@ There isn't a single image file. Every texture is drawn at runtime on a `<canvas
 | Sky mirror | Requested by Astra. It reuses the tidal flat's planar reflection (`renderFrame()` now walks a list of mirror scenes, `MIRRORS`), but here almost the whole ground is a mirror and the sky texture is symmetrical top to bottom, so the horizon disappears. "Gently wrinkling the white cloud under its feet" happens in the ground shader: each pixel works out how many metres behind the bike it is and how far from the middle of the track, and the closer it is to where the wheels have just been, the more it bends the spot where it reads the reflection; the wake spreads sideways the further back it goes. The wheels also leave a ring of ripples every 0.4 seconds. The dried-out salt crust is a hexagonal grid computed in the shader, showing above the water only in a few patches away from the track and faintly under it. As well as the shared high clouds, this stop has a ring of low cumulus near the horizon, so that from the follow camera there is a cloud reflected right under the wheels |
 | Shimanami Kaidō | Requested by Fable. The three linked white suspension bridges are all built in code: towers, deck, main cables (points along an approximate catenary, made into a tube with `TubeGeometry`) and a hanger every 3 metres (drawn in one go as `LineSegments`). On the stretch facing the bridges the pelican coasts: the wheels keep turning but the cranks and pedals stop, which is done by subtracting the coasting time from the pedalling distance; meanwhile the bridge's position is converted into the pelican's own frame to work out how far to turn its head to see it. Fable originally asked for it to stop and put one foot down, but the pelican never stops in the main film and its first step on the ground is saved for the behind-the-scenes reel, so here it coasts and looks instead. The follow camera always stays on the sea-wall side, looking in, so it never ends up inside a lemon tree |
 | Its own computer | Requested by DeepSeek 4.1 Flash. The racks "printing" depend only on time as well: each works out the moment the pelican first comes round to it after arriving, and grows from nothing to full height over 0.55 seconds with a little bounce, like paper being set down; before that there is only a pencil outline drawn with `EdgesGeometry`. The screen is a canvas listing every stop, redrawn only when its content changes. For about a second every 37 seconds the screen borrows a security camera up high and draws this stop live into a texture, so what appears on the screen is the very stop the pelican is riding through; the screen itself is hidden while that happens so it doesn't film itself. The small box's blue light takes its brightness straight from the pedal angle, so it breathes with the pedalling. DeepSeek's original order had the pelican pecking at the keyboard, but in the main film it never stops, so the screen types by itself and the pelican keeps riding |
+| The singing dune | Requested by Murphy. The dune is a ring of crest, and the circle the pelican rides is exactly the crest line: inside is a gentle slope of about 12° (the windward side), outside a 33° slip face (about the steepest angle dry sand will hold). The crest height is a function of angle, `duneCrest(a)`, and the terrain mesh, the pelican's height, the bike's pitch and the lowest point the camera may go all come from the same `duneH(r, a)`, so the bike rises and dips with the ridge. The avalanches are not separate objects: the sand material gets a short piece of shader through `onBeforeCompile` that works out how many metres behind the pelican each point is, turns that into how many seconds ago the wheels went over it, and so knows how far down that tongue of sand should have slid by now; stripes moving downhill make it read as layer sliding over layer. The falling grains are 260 points placed by the same clock. The mirage is in the same shader, drawn after the fog: it looks only at how flat the line of sight to the ground is, and where it is flat enough and far enough it turns the ground into a flickering sky blue, so it backs away as you approach, just like a real one; when the pelican coasts, it is switched off. The hum is synthesised live with Web Audio: a 95 Hz sawtooth and a sine 0.7 Hz away from it (so the two slowly beat), plus an octave above and an octave below, through a low-pass filter; a second, filtered noise is the hiss of the sliding sand. It only sounds when the music is on; while the pelican coasts the music dips a little and the dune sings louder |
 | Tidal flat | Requested by GLM 5.3 Flash. The reflections in the wet sand are true planar reflections: every frame the whole world is flipped upside down (`scene.scale.y = -1`) and drawn with the same camera into a half-resolution texture, and the sand reads that texture at the same screen position, so each reflection lands exactly where it should. The sand is a custom shader: a few sine waves make pools, runnels and dry ridges; pools reflect the most, ridges hardly at all, the track is firm damp sand, and it turns into sea further out, with a gentle ripple so the reflections wobble a little. The paper boats are two extruded hull sides and a feather for a sail, leaning in the mud. A small lighthouse island sits on the horizon |
 | Homecoming | The last stop. It reuses the island and sea from the first scene with a night-time ENV, so it really is the same island. The lighthouse's two beams are open cones with a gradient that fades away from the lamp. The blue bioluminescent plankton are 2,600 additively blended points, recoloured every frame by wave fronts rolling toward the shore, brightest near the sand. Warm light at the lighthouse door, two pelican friends waiting, one of them waving a wing. The pelican wears nothing at all, just as it did at the start |
 
@@ -215,7 +217,7 @@ After every scene, at least two screenshots: one wide shot and one from the foll
 
 The whole thing is completely useless, and making it was a joy.
 
-It left from a small island, rode through twenty-five places, and came back to the same island. This time it was night, the lighthouse was lit, and someone was waiting at the door.
+It left from a small island, rode through twenty-six places, and came back to the same island. This time it was night, the lighthouse was lit, and someone was waiting at the door.
 
 ---
 

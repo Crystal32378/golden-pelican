@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞、蒲甘、天空之鏡、島波海道、牠的電腦、潮間帶等二十七個場景，最後在夜裡回家。">
+<meta name="description" content="一隻黃金鵜鶘騎著單車，從一座小島出發，走遍操場、夜市、月球、深海、宇宙、威尼斯、兔子洞、蒲甘、天空之鏡、島波海道、牠的電腦、會唱歌的沙丘、潮間帶等二十八個場景，最後在夜裡回家。">
 <style>*{box-sizing:border-box}</style>
 </head>
 <body>
@@ -4243,6 +4243,170 @@
     if (bg.mist0) { bg.mist0.material.map.offset.set(t * 0.002, t * 0.001); }
   }
   ENV.bagan = { sky: dawnBaganTex, fog: 0xF0C4A4, near: 28, far: 190, sun: 0xFFB478, sunI: 1.25, hemi: 0.62, hemiSky: 0xF6CDB8, hemiGround: 0x8A5A40 };
+  // ---------- the singing dune (會唱歌的沙丘) — requested by Murphy ----------
+  // The pelican rides along the sharp crest of a big dune. Each pass of the wheels tips the dry sand over the brink,
+  // and it slides down the slip face in tongues, layer on layer like water, and the dune hums (booming dunes sing at
+  // 70–105 Hz, a long low note like a ship far away). On the horizon a mirage lies like a sea.
+  // When the pelican stops pedalling and coasts, the sea goes away: there is not one drop of water here.
+  const duneG = new THREE.Group(); duneG.visible = false; scene.add(duneG);
+  const DN_FLOOR = -6.5;
+  const DU = { dTime: { value: 0 }, dBike: { value: 0 }, dMir: { value: 1 } };
+  const dn = { grains: null, drift: null, fox: null };
+  const dsm = (x, a, b) => { const q = Math.min(1, Math.max(0, (x - a) / (b - a))); return q * q * (3 - 2 * q); };
+  function duneCrest(a) { return 0.28 * Math.sin(2 * a + 0.6) + 0.12 * Math.sin(5 * a + 1.3); }
+  function duneH(r, a) {   // the ground under (r, a): gentle windward side inside the ring, a 33° slip face outside it
+    const c = duneCrest(a);
+    if (r <= R_PATH) { const u = R_PATH - r; return c - 0.22 * u - 0.035 * u * u; }
+    const fl = DN_FLOOR + (0.45 * Math.sin(r * 0.17 + a * 3) + 0.3 * Math.sin(a * 7 + r * 0.05)) * dsm(r, 12, 18) * (1 - dsm(r, 40, 60));
+    const slip = c - 0.64 * (r - R_PATH), k = 1.4, h = Math.max(k - Math.abs(slip - fl), 0) / k;
+    return Math.max(slip, fl) + h * h * k * 0.25;
+  }
+  const duneTex = (function () {
+    const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#5E93C8'); gr.addColorStop(0.3, '#9CC0DC'); gr.addColorStop(0.44, '#DCE4E2'); gr.addColorStop(0.5, '#F4E6CC'); gr.addColorStop(0.56, '#EBCB9E'); gr.addColorStop(1, '#E2B47E');
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256); return new THREE.CanvasTexture(c);
+  })();
+  // the sand shader: ripples, the tyre track, and the avalanche the wheels set off (in the diffuse colour);
+  // the mirage, laid over the far ground at grazing angles (after the fog)
+  const DUNE_AVAL = [
+    'vec3 dw = vDw; float dr = length(dw.xz), da = atan(dw.z, dw.x), lat = dr - 6.0, ss = max(lat, 0.0);',
+    'float behind = mod(da - dBike, 6.2831853) * 6.0, age = behind / 1.8;',
+    'float rip = sin(dr * 8.0 + sin(da * 9.0) * 1.6 + sin(da * 31.0 + dr) * 0.35);',
+    'float ripK = (1.0 - smoothstep(5.5, 5.95, dr)) * 0.7 + smoothstep(13.0, 18.0, dr) * (1.0 - smoothstep(50.0, 80.0, dr));',
+    'diffuseColor.rgb *= 1.0 - 0.07 * ripK * smoothstep(0.2, 0.9, rip);',
+    'float trk = exp(-behind / 30.0) * (1.0 - smoothstep(0.02, 0.05, abs(lat))) * smoothstep(0.2, 0.6, behind);',
+    'diffuseColor.rgb *= 1.0 - 0.3 * trk;',
+    'float onSlip = smoothstep(0.05, 0.3, lat) * (1.0 - smoothstep(9.0, 12.0, lat));',
+    'float scar = smoothstep(0.55, 0.85, sin(da * 17.0 + 1.7) * sin(da * 6.1 + 0.4));',
+    'diffuseColor.rgb *= 1.0 - 0.08 * scar * onSlip;',
+    'float lobe = 0.5 + 0.5 * sin(da * 41.0 + sin(da * 13.0) * 2.0 + sin(ss * 0.9 + da * 7.0) * 1.3 + ss * 0.35);',
+    'float front = 0.9 * age * (0.7 + 0.3 * lobe), fade = 1.0 - smoothstep(7.0, 12.0, age), tongue = onSlip * smoothstep(0.3 + ss * 0.03, 0.6 + ss * 0.03, lobe) * fade;',
+    'float live = tongue * smoothstep(0.0, 0.25, front - ss);',
+    'float wave = 0.5 + 0.5 * sin((ss - age * 1.7) * 6.5 + lobe * 3.0);',
+    'diffuseColor.rgb *= mix(vec3(1.0), vec3(0.84, 0.82, 0.8) + vec3(0.3, 0.28, 0.24) * wave, live);',
+    'diffuseColor.rgb *= 1.0 - 0.22 * tongue * (1.0 - smoothstep(0.0, 0.3, abs(front - ss - 0.15)));'
+  ].join('\n');
+  const DUNE_MIR = [
+    'vec2 dcv = vDw.xz - cameraPosition.xz; float dcd = length(dcv), gz = (cameraPosition.y - vDw.y) / max(dcd, 1.0), dang = atan(dcv.y, dcv.x);',
+    'float mA = (1.0 - smoothstep(0.02, 0.05, gz)) * smoothstep(90.0, 170.0, dcd) * dMir * (0.8 + 0.2 * sin(dang * 7.0 + dTime * 0.3));',
+    'float shim = 0.5 + 0.5 * sin(dcd * 0.11 - dTime * 2.3 + sin(dang * 50.0 + dTime * 0.7) * 1.4);',
+    'vec3 mc = mix(vec3(0.74, 0.84, 0.91), vec3(0.94, 0.96, 0.97), shim * 0.6);',
+    'gl_FragColor.rgb = mix(gl_FragColor.rgb, mc, clamp(mA, 0.0, 1.0));'
+  ].join('\n');
+  function duneShade(m) {
+    m.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, DU);
+      sh.vertexShader = 'varying vec3 vDw;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vDw = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = 'uniform float dTime; uniform float dBike; uniform float dMir; varying vec3 vDw;\n' + sh.fragmentShader
+        .replace('#include <color_fragment>', '#include <color_fragment>\n' + DUNE_AVAL).replace('#include <fog_fragment>', '#include <fog_fragment>\n' + DUNE_MIR);
+    };
+    m.customProgramCacheKey = () => 'dune-sand'; return m;
+  }
+  LAZY.push(['dune', function () {
+    // the dune itself: a ring of crest the pelican rides, sampled densely near the brink
+    const RS = [0, 1.2, 2.4, 3.4, 4.3, 5.0, 5.5, 5.8, 5.95, 6.0, 6.08, 6.3, 6.7, 7.3, 8.1, 9.0, 10.0, 11.2, 12.6, 14.2, 16.0, 18.5, 22, 27, 33, 40, 48, 60], NA = 220;
+    const pos = [], idx = [];
+    for (let j = 0; j <= NA; j++) { const a = j / NA * Math.PI * 2; for (let i = 0; i < RS.length; i++) pos.push(Math.cos(a) * RS[i], duneH(RS[i], a), Math.sin(a) * RS[i]); }
+    for (let j = 0; j < NA; j++) for (let i = 0; i < RS.length - 1; i++) { const p = j * RS.length + i, q = p + RS.length; idx.push(p, q, p + 1, q, q + 1, p + 1); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    const sand = duneShade(M(0xDCA062, { roughness: 1, side: THREE.DoubleSide }));
+    const dune = new THREE.Mesh(geo, sand); dune.receiveShadow = true; duneG.add(dune);
+    const floor = new THREE.Mesh(new THREE.RingGeometry(59.5, 1500, 120, 8), sand); floor.rotation.x = -Math.PI / 2; floor.position.y = DN_FLOOR; floor.receiveShadow = true; duneG.add(floor);
+    // the dune sea all round: long sharp-crested ridges, slip faces to the lee
+    const dcols = [0xD99A5C, 0xD09054, 0xDEA668, 0xCC8C52].map(c => duneShade(M(c, { roughness: 1 })));
+    function farDune(L, W, H, x, z, rot, seed, k) {
+      const g = new THREE.PlaneGeometry(L, W, 30, 12); g.rotateX(-Math.PI / 2); const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const u = p.getX(i) / L, v = p.getZ(i), z0 = Math.sin(u * Math.PI * 2.6 + seed) * W * 0.08, d = v - z0;
+        const prof = Math.max(0, d < 0 ? 1 + d / (W * 0.62) : 1 - d / (W * 0.24)), env = Math.pow(Math.max(0, Math.cos(u * Math.PI)), 0.6);
+        p.setY(i, H * Math.pow(prof, 1.25) * env - 0.4);
+      }
+      g.computeVertexNormals();
+      const m = new THREE.Mesh(g, dcols[k % 4]); m.position.set(x, DN_FLOOR, z); m.rotation.y = rot; duneG.add(m);
+    }
+    for (let i = 0; i < 18; i++) {
+      const a = i * 2.39996 + 0.7, r = 46 + (i % 6) * 30 + (i % 4) * 6;
+      farDune(90 + (i % 5) * 22, 40 + (i % 4) * 10, 4.5 + (i % 5) * 1.8, Math.cos(a) * r, Math.sin(a) * r, 0.5 + (i % 3) * 0.12, i * 1.3, i);
+    }
+    // a fennec fox sitting on the windward side, watching the horizon and then the pelican
+    const fox = new THREE.Group(), FA = 2.25, FR = 4.5; fox.position.set(Math.cos(FA) * FR, duneH(FR, FA), Math.sin(FA) * FR); fox.rotation.y = -FA; duneG.add(fox);
+    const fur = M(0xE8BE86), cream = M(0xF6E8CF), dark = M(0x3A2A22);
+    facet(fox, fur, V(-0.02, 0.17, 0), [0.15, 0.16, 0.12], [0, 0, 0.25], 1);
+    facet(fox, cream, V(0.07, 0.2, 0), [0.07, 0.12, 0.08], [0, 0, 0.2], 1);
+    [-1, 1].forEach(s => { rod(fox, V(0.07, 0.15, s * 0.05), V(0.09, 0.0, s * 0.05), 0.022, fur); facet(fox, cream, V(0.11, 0.01, s * 0.05), [0.035, 0.018, 0.025], null, 0); });
+    const tail = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-0.13, 0.06, 0), V(-0.26, 0.03, 0.06), V(-0.28, 0.03, 0.2), V(-0.16, 0.03, 0.27)]), 12, 0.045, 6), fur); tail.castShadow = true; fox.add(tail);
+    facet(fox, dark, V(-0.13, 0.03, 0.28), [0.05, 0.04, 0.045], null, 1);
+    const hd = new THREE.Group(); hd.position.set(0.06, 0.36, 0); fox.add(hd);
+    facet(hd, fur, V(0, 0, 0), [0.085, 0.075, 0.08], null, 1);
+    facet(hd, cream, V(0.08, -0.025, 0), [0.065, 0.035, 0.04], null, 1);
+    facet(hd, dark, V(0.14, -0.022, 0), [0.014, 0.013, 0.015], null, 0);
+    const ears = [];
+    [-1, 1].forEach(s => {
+      facet(hd, mat.eye, V(0.065, 0.015, s * 0.045), [0.013, 0.015, 0.01], null, 0);
+      const eg = new THREE.Group(); eg.position.set(-0.01, 0.05, s * 0.05); eg.rotation.x = -s * 0.42; hd.add(eg);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.21, 4), fur); ear.position.y = 0.1; ear.scale.z = 0.45; ear.castShadow = true; eg.add(ear);
+      const inner = new THREE.Mesh(new THREE.ConeGeometry(0.038, 0.15, 4), M(0xF0C9A8)); inner.position.set(0.012, 0.09, 0); inner.scale.z = 0.3; eg.add(inner);
+      ears.push(eg);
+    });
+    fox.scale.setScalar(1.7);
+    dn.fox = { g: fox, hd, ears };
+    // sand grains in the tongue just set off, and spindrift blowing off the crest
+    const mkPts = (n, size, col, op) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(n * 3), 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ color: col, size, transparent: true, opacity: op, depthWrite: false })); p.frustumCulled = false; duneG.add(p); return p; };
+    dn.grains = mkPts(260, 0.035, 0xF2D2A0, 0.85);
+    dn.drift = mkPts(180, 0.035, 0xF7E2BC, 0.55);
+  }]);
+  // sand goggles, pushed up on the forehead
+  const duneGear = [];
+  (function () {
+    const g = new THREE.Group(); headGrp.add(g); duneGear.push(g);
+    const brass = M(0xB8893E, { metalness: 0.5, roughness: 0.45 }), glass = M(0x7FB6C8, { metalness: 0.2, roughness: 0.15, transparent: true, opacity: 0.85 }), band = M(0x6E4A32, { roughness: 0.9 });
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(0.118, 0.014, 4, 24), band); strap.position.set(0.15, 2.44, 0); strap.rotation.set(Math.PI / 2, 0.32, 0); strap.scale.set(1.1, 0.95, 1); g.add(strap);
+    [-1, 1].forEach(s => {
+      const cup = new THREE.Group(); cup.position.set(0.235, 2.475, s * 0.052); cup.rotation.set(0, 0, -0.95); g.add(cup);
+      const rimM = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.034, 0.03, 12), brass); rimM.rotation.z = Math.PI / 2; rimM.castShadow = true; cup.add(rimM);
+      const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 12), glass); lens.rotation.z = Math.PI / 2; lens.position.x = 0.016; cup.add(lens);
+    });
+    g.visible = false;
+  })();
+  const DN_LAP = Math.PI * 2 * R_PATH / 1.8, DN_C0 = DN_LAP * 0.62, DN_CW = 4.4;   // once a lap it stops pedalling and coasts along the crest
+  function duneCoast(t) { const u = ((t % DN_LAP) + DN_LAP) % DN_LAP; return { u, k: dsm(u, DN_C0, DN_C0 + 0.8) * (1 - dsm(u, DN_C0 + DN_CW - 0.9, DN_C0 + DN_CW)), coasted: Math.floor(t / DN_LAP) * DN_CW + Math.min(DN_CW, Math.max(0, u - DN_C0)) }; }
+  const _dv = new THREE.Vector3();
+  function updateDune(t) {
+    const th = t * 1.8 / R_PATH, ra = -th;
+    DU.dTime.value = t; DU.dBike.value = ((ra % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    // the bike rides the crest: up and down with it, nose following the slope
+    const y = duneCrest(ra), dy = -(duneCrest(ra - 0.01) - y) / (0.01 * R_PATH);
+    rider.position.y = y + 0.04; rider.rotation.z = Math.atan(dy);
+    const c = duneCoast(t);
+    DU.dMir.value = 1 - c.k;   // stopped pedalling, listening: the sea on the horizon is gone
+    if (c.k > 0.001) {
+      rider.updateMatrixWorld(true); _dv.set(Math.cos(ra) * 200, DN_FLOOR, Math.sin(ra) * 200); rider.worldToLocal(_dv);
+      const yaw = Math.max(-1.1, Math.min(1.1, Math.atan2(-_dv.z, _dv.x)));
+      headGrp.rotation.y = headGrp.rotation.y * (1 - c.k) + yaw * c.k;
+    }
+    // grains sliding in the tongues the wheels just tipped over the brink
+    const gp = dn.grains.geometry.attributes.position.array, NG = gp.length / 3;
+    for (let i = 0; i < NG; i++) {
+      const life = 7, age = (t * 0.9 + i * 0.6180339 * life) % life, a = ra + age * 1.8 / R_PATH + ((i * 37) % 11 - 5) * 0.011;
+      const s = 0.9 * age * (0.6 + 0.4 * (((i * 53) % 17) / 17)) + 0.05, r = R_PATH + s;
+      gp[i * 3] = Math.cos(a) * r; gp[i * 3 + 1] = duneH(r, a) + 0.025 + 0.02 * Math.sin(age * 9 + i); gp[i * 3 + 2] = Math.sin(a) * r;
+    }
+    dn.grains.geometry.attributes.position.needsUpdate = true;
+    const dp = dn.drift.geometry.attributes.position.array, ND = dp.length / 3;
+    for (let i = 0; i < ND; i++) {
+      const u = (t * 0.32 + i * 0.6180339) % 1, a = i * 2.39996 + Math.floor(t * 0.32 + i * 0.6180339) * 0.7, r = R_PATH + 0.1 + u * 3.6;
+      dp[i * 3] = Math.cos(a) * r; dp[i * 3 + 1] = duneCrest(a) - 0.64 * (r - R_PATH) * 0.55 + Math.sin(u * Math.PI) * 0.35; dp[i * 3 + 2] = Math.sin(a) * r;
+    }
+    dn.drift.geometry.attributes.position.needsUpdate = true;
+    // the fox: ears turning to the hum, head following the pelican as it goes by
+    const f = dn.fox; f.g.updateMatrixWorld(true); _dv.copy(rider.position); f.g.worldToLocal(_dv);
+    const fy = Math.atan2(-_dv.z, _dv.x), near = Math.hypot(_dv.x, _dv.z) < 5.5;
+    f.hd.rotation.y = near ? Math.max(-1.2, Math.min(1.2, fy)) : Math.sin(t * 0.3) * 0.25;
+    f.ears.forEach((e, k) => { e.rotation.y = Math.sin(t * 0.9 + k * 2.1) * 0.25 + (c.k > 0.5 ? 0.3 * (k ? 1 : -1) : 0); });
+  }
+  ENV.dune = { sky: duneTex, fog: 0xEFD3AE, near: 70, far: 520, sun: 0xFFE2B4, sunI: 0.95, hemi: 0.8, hemiSky: 0xD6E4F0, hemiGround: 0xC08850 };
+
   // render helper: on the mirror scenes (tidal flat, salt flat), draw the upside-down world into the mirror texture first
   const _rs = new THREE.Vector2();
   td.g = tideG; const MIRRORS = [td, sl];
@@ -4500,6 +4664,7 @@
     shimaG.visible = name === 'shima'; shimaGear.forEach(o => { o.visible = name === 'shima'; });
     screenG.visible = name === 'screen'; screenGear.forEach(o => { o.visible = name === 'screen'; });
     baganG.visible = name === 'bagan'; baganGear.forEach(o => { o.visible = name === 'bagan'; });
+    duneG.visible = name === 'dune'; duneGear.forEach(o => { o.visible = name === 'dune'; }); rider.rotation.z = 0;
     if (name === 'bagan') { sun.position.set(-21, 5.5, 14); bg.done = false; } else sun.position.set(-22, 15, 13);   // a low sunrise sun for Bagan only
     scene.userData.sky.material.color.set(0xFFFFFF);
     rabbitG.visible = name === 'rabbit'; rabbitGear.forEach(o => { o.visible = name === 'rabbit'; }); rider.scale.setScalar(1);
@@ -4523,11 +4688,11 @@
     wetG.visible = name === 'wetmarket'; wetGear.forEach(o => { o.visible = name === 'wetmarket'; });
     const isNight = name === 'market';
     const isMoon = name === 'moon';
-    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit', isTide = name === 'tide', isSalt = name === 'salt', isShima = name === 'shima', isScreen = name === 'screen', isBagan = name === 'bagan';
-    setEnv(isBagan ? ENV.bagan : isScreen ? ENV.screen : isSalt ? ENV.salt : isShima ? ENV.shima : isTide ? ENV.tide : isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
+    const isPolar = name === 'polar', isJungle = name === 'jungle', isSky = name === 'sky', isOcean = name === 'ocean', isSpace = name === 'space', isHome = name === 'home', isWet = name === 'wetmarket', isLib = name === 'library', isRain = name === 'rain', isVinyl = name === 'vinyl', isGlobe = name === 'globe', isGarden = name === 'garden', isHomecoming = name === 'homecoming', isRabbit = name === 'rabbit', isTide = name === 'tide', isSalt = name === 'salt', isShima = name === 'shima', isScreen = name === 'screen', isBagan = name === 'bagan', isDune = name === 'dune';
+    setEnv(isDune ? ENV.dune : isBagan ? ENV.bagan : isScreen ? ENV.screen : isSalt ? ENV.salt : isShima ? ENV.shima : isTide ? ENV.tide : isRabbit ? ENV.rabbit : isHomecoming ? ENV.homecoming : isGarden ? ENV.garden : isGlobe ? ENV.globe : isVinyl ? ENV.vinyl : isRain ? ENV.rain : isLib ? ENV.library : isWet ? ENV.wet : isHome ? ENV.home : isSpace ? ENV.space : isMoon ? ENV.moon : isNight ? ENV.night : isPolar ? ENV.polar : isJungle ? ENV.jungle : isSky ? ENV.sky : isOcean ? ENV.ocean : ENV.day);
     [sunDisc, halo].forEach(o => { o.visible = !isBagan && !isScreen && !isSalt && !isShima && !isRabbit && !isNight && !isMoon && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
-    clouds.forEach(c => { c.visible = !isScreen && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
-    gulls.forEach(q => { q.g.visible = !isBagan && !isScreen && !isSalt && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
+    clouds.forEach(c => { c.visible = !isDune && !isScreen && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming; });
+    gulls.forEach(q => { q.g.visible = !isDune && !isBagan && !isScreen && !isSalt && !isRabbit && !isNight && !isMoon && !isPolar && !isJungle && !isSky && !isOcean && !isSpace && !isHome && !isWet && !isLib && !isRain && !isVinyl && !isGlobe && !isGarden && !isHomecoming && name !== 'kyoto'; });
     if (name !== 'island') dolphins.forEach(d => { d.mesh.visible = false; d.sIn.g.visible = false; d.sOut.g.visible = false; });
   }
 
@@ -4544,7 +4709,7 @@
     lean.rotation.x = -0.07;
     lean.position.y = Math.abs(Math.sin(dist * 3.1)) * 0.004;
     const wr = -dist / WR; rearWheel.rotation.z = wr; frontWheel.rotation.z = wr;
-    const ca = -(sceneName === 'shima' ? dist - SPEED * shimaCoast(t).coasted : dist) / WR * 0.55;   // on the Shimanami road the pedals rest while it coasts
+    const ca = -(sceneName === 'shima' ? dist - SPEED * shimaCoast(t).coasted : sceneName === 'dune' ? dist - SPEED * duneCoast(t).coasted : dist) / WR * 0.55;   // on the Shimanami road the pedals rest while it coasts
     [0, 1].forEach(i => {
       const a = ca + i * Math.PI, side = i === 0 ? 0.16 : -0.16;
       const pp = V(BB.x + Math.cos(a) * CRANK, BB.y + Math.sin(a) * CRANK, side);
@@ -4566,7 +4731,7 @@
     headGrp.rotation.y = Math.sin(t * 0.7) * 0.18; // looking around
     pouch.scale.y = 0.075 + Math.max(0, Math.sin(t * 1.3)) * 0.02;
 
-    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else if (sceneName === 'tide') updateTide(t); else if (sceneName === 'salt') updateSalt(t); else if (sceneName === 'shima') updateShima(t); else if (sceneName === 'screen') updateScreen(t); else if (sceneName === 'bagan') updateBagan(t); else updateMarket(t);
+    if (sceneName === 'island') { updateSea(t); updateDolphins(t); } else if (sceneName === 'school') updateSchool(t); else if (sceneName === 'circle') updateCircle(t); else if (sceneName === 'kyoto') updateKyoto(t); else if (sceneName === 'moon') updateMoon(t); else if (sceneName === 'polar') updatePolar(t); else if (sceneName === 'jungle') updateJungle(t); else if (sceneName === 'sky') updateSky(t); else if (sceneName === 'paris') updateParis(t); else if (sceneName === 'ocean') updateOcean(t); else if (sceneName === 'space') updateSpace(t); else if (sceneName === 'home') updateHome(t); else if (sceneName === 'wetmarket') updateWet(t); else if (sceneName === 'library') updateLibrary(t); else if (sceneName === 'rain') updateRain(t); else if (sceneName === 'vinyl') updateVinyl(t); else if (sceneName === 'globe') updateGlobe(t); else if (sceneName === 'garden') updateGarden(t); else if (sceneName === 'homecoming') updateHomecoming(t); else if (sceneName === 'venice') updateVenice(t); else if (sceneName === 'rabbit') updateRabbit(t); else if (sceneName === 'tide') updateTide(t); else if (sceneName === 'salt') updateSalt(t); else if (sceneName === 'shima') updateShima(t); else if (sceneName === 'screen') updateScreen(t); else if (sceneName === 'bagan') updateBagan(t); else if (sceneName === 'dune') updateDune(t); else updateMarket(t);
     updateGulls(t);
     glint.material.opacity = 0.42 + Math.sin(t * 2.3) * 0.08;
     clouds.forEach(c => {
@@ -4603,6 +4768,11 @@
       if (sceneName === 'bagan') {   // stay outside the track, looking in at the temple
         const cr = Math.hypot(tmp.x, tmp.z), want = Math.min(11.5, Math.max(8.6, cr < R_PATH + 0.8 ? 2 * R_PATH - cr + 1.6 : cr)), k = want / (cr || 1);
         tmp.x *= k; tmp.z *= k; tmp.y = Math.max(tmp.y, 1.7);
+      }
+      if (sceneName === 'dune') {   // below the brink looking up the slip face, or up on the windward side looking out over it
+        const cr = Math.hypot(tmp.x, tmp.z), g = duneH(cr, Math.atan2(tmp.z, tmp.x));
+        tmp.y = cr > R_PATH + 0.4 ? Math.min(tmp.y, rider.position.y + 0.9) : Math.max(tmp.y, rider.position.y + 1.5);
+        tmp.y = Math.max(tmp.y, g + 0.55);
       }
       if (sceneName === 'shima') {   // stay on the sea side of the road, looking in over the terraces
         const cr = Math.hypot(tmp.x, tmp.z), want = Math.min(11, cr < R_PATH + 0.8 ? 2 * R_PATH - cr + 1.6 : cr), k = want / (cr || 1);
@@ -4651,13 +4821,13 @@
   const speeds = [1, 2, 0.5];
   btnSpeed.onclick = () => { speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; btnSpeed.textContent = '速度 ' + speed + '×'; };
   const btnScene = document.getElementById('scene');
-  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞', bagan: '場景：蒲甘', salt: '場景：天空之鏡', shima: '場景：島波海道', screen: '場景：牠的電腦', tide: '場景：潮間帶', bts: '花絮' };
+  const SCENE_LABEL = { island: '場景：小島', school: '場景：操場', market: '場景：夜市', circle: '場景：圓環', kyoto: '場景：銀閣寺', moon: '場景：登月', polar: '場景：極地', jungle: '場景：雨林', sky: '場景：雲海', paris: '場景：凱旋門', ocean: '場景：深海', space: '場景：宇宙', home: '場景：家', wetmarket: '場景：菜市場', library: '場景：書海', rain: '場景：雨天', vinyl: '場景：黑膠', globe: '場景：雪花球', garden: '場景：植物園', homecoming: '場景：回家', venice: '場景：威尼斯', rabbit: '場景：兔子洞', bagan: '場景：蒲甘', salt: '場景：天空之鏡', shima: '場景：島波海道', screen: '場景：牠的電腦', dune: '場景：會唱歌的沙丘', tide: '場景：潮間帶', bts: '花絮' };
   function applyScene(name) {
     if (name === 'bts' && audio && !audio.paused) btnMusic.onclick();   // the reel has no theme music
     setScene(name, t); btnScene.textContent = SCENE_LABEL[name];
   }
   btnScene.onclick = () => {
-    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'bagan', 'salt', 'shima', 'screen', 'tide', 'homecoming', 'bts'];
+    const order = ['island', 'school', 'market', 'circle', 'kyoto', 'moon', 'polar', 'jungle', 'sky', 'paris', 'ocean', 'space', 'home', 'wetmarket', 'library', 'rain', 'vinyl', 'globe', 'garden', 'venice', 'rabbit', 'bagan', 'salt', 'shima', 'screen', 'dune', 'tide', 'homecoming', 'bts'];
     const next = order[(order.indexOf(sceneName) + 1) % order.length];
     applyScene(next);
     try { history.replaceState(null, '', '#' + next); } catch (e) {}
@@ -4713,6 +4883,25 @@
     if (!want && ba.phraseOn) { ba.phraseOn = false; ba.el.pause(); }
     ba.pg.gain.setTargetAtTime(want ? 0.55 * sm(rel, 0, 1.4) * (1 - sm(rel, 5.5, 8.2)) : 0, now, 0.08);
   }
+  // ---------- the dune sings: a low hum (about 95 Hz, with its overtones) and the hiss of sliding sand, under the music ----------
+  const dsa = { ac: null };
+  function duneAudioTick(t) {
+    const want = !!(sceneName === 'dune' && audio && !audio.paused && audioLink.ctx);
+    if (!dsa.ac) {
+      if (!want) return;
+      const ac = audioLink.ctx; dsa.ac = ac; dsa.g = ac.createGain(); dsa.g.gain.value = 0;
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 0.8; lp.connect(dsa.g); dsa.g.connect(ac.destination);
+      dsa.osc = [[95, 'sawtooth', 0.45], [95.7, 'sine', 0.7], [190.6, 'sine', 0.22], [47.5, 'sine', 0.25]].map(([f, type, v]) => { const o = ac.createOscillator(); o.type = type; o.frequency.value = f; const g = ac.createGain(); g.gain.value = v; o.connect(g); g.connect(lp); o.start(); return o; });
+      const buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const n = ac.createBufferSource(); n.buffer = buf; n.loop = true; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 0.7;
+      dsa.hiss = ac.createGain(); dsa.hiss.gain.value = 0; n.connect(bp); bp.connect(dsa.hiss); dsa.hiss.connect(ac.destination); n.start();
+    }
+    const now = dsa.ac.currentTime, k = want ? duneCoast(t).k : 0, swell = 0.6 + 0.4 * Math.sin(t * 0.45) * Math.sin(t * 0.17 + 1);
+    dsa.g.gain.setTargetAtTime(want ? (0.07 + 0.06 * k) * swell : 0, now, 0.6);     // louder when the pedals go quiet
+    dsa.hiss.gain.setTargetAtTime(want ? 0.012 + 0.01 * k : 0, now, 0.5);
+    if (want) dsa.osc[0].frequency.setTargetAtTime(95 + 2.5 * Math.sin(t * 0.7), now, 0.3);
+    if (audio) audio.volume = want ? 0.8 - 0.3 * k : 0.8;
+  }
   const btnSnd = btsUI.querySelector('.snd'), btnOut = btsUI.querySelector('.out');
   btnSnd.onclick = () => {
     if (!ba.ac && !btsAudioInit()) return;
@@ -4721,7 +4910,7 @@
     if (!ba.on) { ba.waves.gain.value = 0; ba.wind.gain.value = 0; ba.pg.gain.value = 0; if (ba.phraseOn) { ba.phraseOn = false; ba.el.pause(); } }
   };
   btnOut.onclick = () => { applyScene('island'); try { history.replaceState(null, '', '#island'); } catch (e) {} };
-  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#bagan', '#salt', '#shima', '#screen', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
+  if (['#school', '#market', '#circle', '#kyoto', '#moon', '#polar', '#jungle', '#sky', '#paris', '#ocean', '#space', '#home', '#wetmarket', '#library', '#rain', '#vinyl', '#globe', '#garden', '#homecoming', '#venice', '#rabbit', '#bagan', '#salt', '#shima', '#screen', '#dune', '#tide', '#bts'].includes(location.hash)) applyScene(location.hash.slice(1));
   controls.addEventListener('start', () => { if (auto) { auto = false; controls.target.copy(focus); syncUI(); } });
   syncUI();
 
@@ -4730,7 +4919,7 @@
   function loop(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (playing) t += dt * speed;
-    pose(t); btsAudioTick(t);
+    pose(t); btsAudioTick(t); duneAudioTick(t);
     if (auto) { autoCam(t); prevFocus.copy(focus); }
     else {
       focus.set(0.1, 1.3, 0); rider.localToWorld(focus);
