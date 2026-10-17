@@ -54,7 +54,7 @@
 
 - 構想與導演：Crystal
 - 建模與程式：Claude（Anthropic）
-- 配樂：Crystal（以 MiniMax 音樂模型生成，`score.mp3`）
+- 配樂：Crystal，主題曲〈The Pelican's Red Bicycle〉（以 MiniMax 音樂模型生成，`score.mp3`）；第一版配樂留在 `score-v1.mp3`，導覽影片用的也是它
 
 ## 點菜名單
 

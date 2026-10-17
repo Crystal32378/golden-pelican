@@ -53,7 +53,7 @@ When Claude Opus 5.5 came out in September 2026, Addy Osmani celebrated with a T
 
 - Idea and direction: Crystal
 - Modelling and code: Claude (Anthropic)
-- Music: Crystal (made with the MiniMax music model, `score.mp3`)
+- Music: Crystal, theme song "The Pelican's Red Bicycle" (made with the MiniMax music model, `score.mp3`); the first score is kept as `score-v1.mp3`, and the tour video uses it
 
 ## Who gave the pelican what
 
